@@ -1,0 +1,784 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<!-- Head tag -->
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="陆离的博客">
+    <meta name="keyword" content>
+    <meta name="theme-color" content="#600090">
+    <meta name="msapplication-navbutton-color" content="#600090">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="#600090">
+    <link rel="shortcut icon" href="https://cdn4.iconfinder.com/data/icons/ionicons/512/icon-person-128.png">
+    <link rel="alternate" type="application/atom+xml" title="luli" href="/atom.xml">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/animate.css/3.5.2/animate.min.css">
+    <link rel="stylesheet" href="//cdn.bootcss.com/font-awesome/4.6.3/css/font-awesome.css">
+    <title>
+        
+        深入理解Java锁(上)｜luli&#39;s blog
+        
+    </title>
+
+    <link rel="canonical" href="http://tamlover.github.io/blog/2019/09/17/2019-9-17-java-lock(1)/">
+
+    <!-- Bootstrap Core CSS -->
+    <link rel="stylesheet" href="/blog/css/bootstrap.min.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/blog/css/blog-style.css">
+
+    <!-- Pygments Github CSS -->
+    <link rel="stylesheet" href="/blog/css/syntax.css">
+</head>
+
+<style>
+
+    header.intro-header {
+        background-image: url('/image/tree.jpg')
+    }
+</style>
+<!-- hack iOS CSS :active style -->
+<body ontouchstart="" class="animated fadeIn">
+<!-- Navigation -->
+<nav class="navbar navbar-default navbar-custom navbar-fixed-top " id="nav-top" data-ispost = "true" data-istags="false
+" data-ishome = "false" >
+    <div class="container-fluid">
+        <!-- Brand and toggle get grouped for better mobile display -->
+        <div class="navbar-header page-scroll">
+            <button type="button" class="navbar-toggle">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand animated pulse" href="/blog/">
+                <span class="brand-logo">
+                    luli
+                </span>
+                's Blog
+            </a>
+        </div>
+
+        <!-- Collect the nav links, forms, and other content for toggling -->
+        <!-- Known Issue, found by Hux:
+            <nav>'s height woule be hold on by its content.
+            so, when navbar scale out, the <nav> will cover tags.
+            also mask any touch event of tags, unfortunately.
+        -->
+        <!-- /.navbar-collapse -->
+        <div id="huxblog_navbar">
+            <div class="navbar-collapse">
+                <ul class="nav navbar-nav navbar-right">
+                    <li>
+                        <a href="/blog/">Home</a>
+                    </li>
+					
+                    
+					
+					
+                </ul>
+            </div>
+        </div>
+    </div>
+    <!-- /.container -->
+</nav>
+<script>
+    // Drop Bootstarp low-performance Navbar
+    // Use customize navbar with high-quality material design animation
+    // in high-perf jank-free CSS3 implementation
+//    var $body   = document.body;
+    var $toggle = document.querySelector('.navbar-toggle');
+    var $navbar = document.querySelector('#huxblog_navbar');
+    var $collapse = document.querySelector('.navbar-collapse');
+
+    $toggle.addEventListener('click', handleMagic)
+    function handleMagic(e){
+        if ($navbar.className.indexOf('in') > 0) {
+        // CLOSE
+            $navbar.className = " ";
+            // wait until animation end.
+            setTimeout(function(){
+                // prevent frequently toggle
+                if($navbar.className.indexOf('in') < 0) {
+                    $collapse.style.height = "0px"
+                }
+            },400)
+        }else{
+        // OPEN
+            $collapse.style.height = "auto"
+            $navbar.className += " in";
+        }
+    }
+</script>
+
+<!-- Main Content -->
+
+<!--only post-->
+
+
+<img class="wechat-title-img"
+     src="null/../../../blog/image/header/triangular.jpg">
+
+
+<style>
+    
+    header.intro-header {
+        background-image: url('/../../../blog/image/header/triangular.jpg?imageView2/1/w/1400/h/400/interlace/1/q/90')
+    }
+
+    
+</style>
+
+<header class="intro-header">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1 text-center">
+                <div class="post-heading">
+                    <h1>深入理解Java锁(上)</h1>
+                    
+                    <span class="meta">
+                         作者 qili
+                        <span>
+                          日期 2019-09-17
+                         </span>
+                    </span>
+                    <div class="tags text-center">
+                        
+                        <a class="tag" href="/blog/tags/#java"
+                           title="java">java</a>
+                        
+                        <a class="tag" href="/blog/tags/#lock"
+                           title="lock">lock</a>
+                        
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="post-title-haojen">
+        <span>
+            深入理解Java锁(上)
+        </span>
+    </div>
+</header>
+
+<!-- Post Content -->
+<article>
+    <div class="container">
+        <div class="row">
+            <!-- Post Container -->
+            <div class="col-lg-8 col-lg-offset-1 col-sm-9 post-container">
+                <h2 id="前言"><a href="#前言" class="headerlink" title="前言"></a>前言</h2><h3 id="什么是锁"><a href="#什么是锁" class="headerlink" title="什么是锁"></a>什么是锁</h3><p>简而言之，锁是对资源的一种<strong>保护措施</strong>。在多线程编程中，锁是对多线程访问资源的一种<strong>控制方式</strong>。</p>
+<h3 id="为什么需要锁"><a href="#为什么需要锁" class="headerlink" title="为什么需要锁"></a>为什么需要锁</h3><h4 id="CPU-cache"><a href="#CPU-cache" class="headerlink" title="CPU cache"></a>CPU cache</h4><p>当代CPU为了解决计算速度与从内存读取速度的匹配，在CPU中添加了L1, L2,L3缓存，如下图：</p>
+<p><img src="../../../../image/post/java-lock/CPUcache.png" alt></p>
+<p>CPU在读取数据的时候并不会直接去内存中找，而是先在各级缓存中读取，读取不到才去主存中找，之后会缓存在内存中，以便后续计算继续使用，从而降低从主存中读取数据带来的延迟。</p>
+<p>当有多个缓存的时候就会带来缓存一致性问题，如下：</p>
+<p><img src="../../../../image/post/java-lock/data-consistent.png" alt></p>
+<p>启动俩个线程去执行i++，因为i++不具备原子性，所以在A读取到i后，在计算完毕刷新回主存之前，B很可能读取到了i，这时i依然是初始值1，这样当A计算完++将i=2刷新回主存，B计算完后也将i=2刷新回了主存，虽然总共执行了俩次i++，但是i的结果等于2。</p>
+<h4 id="缓存不一致的解决"><a href="#缓存不一致的解决" class="headerlink" title="缓存不一致的解决"></a>缓存不一致的解决</h4><ul>
+<li><p>总线（bus）加锁</p>
+<p>CPU通过总线与内存通信，如果对总线加锁相当于阻塞其他CPU对内存的访问，从而使得只能有一个CPU使用这个变量的内存。</p>
+</li>
+<li><p>缓存一致性协议</p>
+<p>由于总线锁住期间，其他CPU无法访问内存导致效率低下，所以提出只锁数据所在缓存行。实现这一策略例如M（Modified）E（Exclusive）S（Share ）I（Invalid）协议。MESI协议这里不详细讲解，有兴趣的可以了解<a href="https://blog.csdn.net/muxiqingyang/article/details/6615199" target="_blank" rel="noopener">Cache一致性协议MESI</a>。通俗来的说MESI协议保证一个CPU对一个数据修改时会通知其他CPU缓存该数据无效，使用时需要从主存中重新读取。但是MESI协议可以保证缓存的一致性，<strong>但是无法保证实时性</strong>。</p>
+</li>
+</ul>
+<h4 id="JMM"><a href="#JMM" class="headerlink" title="JMM"></a>JMM</h4><p>JMM，Java内存模型（java memory model），和JVM内存模型不同，后者指的是JVM内存分区，例如堆，栈，本地方法栈这些，而JMM是一种虚拟机规范。</p>
+<p>结合前面的CPU cache图再来看一下JMM抽象图</p>
+<p><img src="../../../../image/post/java-lock/JMMAbstractStructure.png" alt></p>
+<p>从抽象的角度来看，JMM定义了线程和硬件内存之间的抽象关系</p>
+<ul>
+<li>线程之间共享变量存储在主内存中（Main Memory）</li>
+<li>每个线程包含一个私有的本地内存，本地内存是JMM的一个概念，并不真实存在，它包括了L1,L2,L3三级缓存。</li>
+</ul>
+<h4 id="线程安全问题"><a href="#线程安全问题" class="headerlink" title="线程安全问题"></a>线程安全问题</h4><p>从前面的分析得知，并发编程中，以下情况可能出现线程安全的问题：</p>
+<ul>
+<li>多个线程在操作共享的数据。</li>
+<li>操作共享数据的线程代码有多条。</li>
+<li>当一个线程在执行操作共享数据的多条代码过程中，其他线程参与了运算。</li>
+</ul>
+<p>在讨论如何解决线程安全问题，为保证数据安全需要满足三大特性：原子性、可见性、顺序性。</p>
+<ul>
+<li><p>原子性</p>
+<p>一个操作中可能包含多个自操作，要么全都执行，要么全不执行（锁，CAS）</p>
+</li>
+<li><p>可见性</p>
+<p>多个线程并发访问共享变量时，一个线程对共享变量的修改，其他线程能立即看到（锁，volatile）</p>
+</li>
+<li><p>顺序性</p>
+<p>程序执行的顺序按照代码的先后顺序执行，不会被处理器重排序（锁，volatile）</p>
+</li>
+</ul>
+<p>这里可以发现，锁是解决线程安全问题的一个常用且重要措施。</p>
+<h3 id="Java锁分类"><a href="#Java锁分类" class="headerlink" title="Java锁分类"></a>Java锁分类</h3><p>在详细讲解Java锁之前，先来看一下Java中的“锁“有哪些</p>
+<ul>
+<li>悲观锁/乐观锁</li>
+</ul>
+<p>悲观锁和乐观锁看待线程同步的角度不同。</p>
+<p>悲观锁认为本线程在使用的时候一定会有其他的线程来修改数据，因此在获取数据之前先加锁。Java中，synchronized关键字和Lock的实现类都是悲观锁。</p>
+<p>乐观锁认为，不会有别的线程来修改数据，所以不会添加锁。在本线程修改数据的之前判断一下数据有没有被其他线程修改，如果有则执行特殊操作（报错或者重试），如果没有则更新。例如CAS无锁算法。</p>
+<p><img src="../../../../image/post/java-lock/%E6%82%B2%E8%A7%82%E9%94%81%E4%B9%90%E8%A7%82%E9%94%81.png" alt></p>
+<ul>
+<li>自旋锁/自适应自旋锁</li>
+</ul>
+<p>自旋锁是指获取锁的线程不会立即阻塞，而是采用循环的方式去获取锁，这样的好处是减少CPU上下文切换的消耗，缺点就是循环会带来CPU消耗。在java中，自旋锁是利用CAS循环，循环次数超过限定次数（默认是10次，可以使用-XX:PreBlockSpin来更改）还未获取到锁则挂起。</p>
+<p>自适应自旋锁和自旋锁是类似的，不同的是前者循环次数不固定。如果该线程刚刚获取的过锁，则jvm就会允许自旋相对更长的时间，如果自旋很少成功获得，那再尝试自旋获取时就直接阻塞，省掉自旋带来的CPU消耗。</p>
+<ul>
+<li>无锁/偏向锁/轻量级锁/重量级锁</li>
+</ul>
+<p>这四种锁是锁的状态，并且都是针对synchronized的优化。</p>
+<p>无锁：资源未加锁，可以多个线程同时访问修改，但是只有一个线程可以修改成功。线程通过通过修改锁状态升级为偏向锁。</p>
+<p>偏向锁：资源一直再被同一个线程访问，则线程自动获取锁，降低获取锁的代价。当有其他线程访问偏向锁时，偏向锁升级为轻量级锁</p>
+<p>轻量级锁：线程通过自旋的方式获取锁不会阻塞，当有一个线程持有锁，一个线程在自旋获取锁，又来一个线程尝试获取锁时，锁升级为重量级锁。</p>
+<p>重量级锁：等待锁的线程都会进入阻塞状态。</p>
+<ul>
+<li>公平锁/非公平锁</li>
+</ul>
+<p>公平锁是指多个线程获取锁的顺序依照申请锁的顺序来获取锁，非公平锁则可以直接尝试获取锁无需等待。俩者相比，公平锁不会发生饿死的情况，但是吞吐率相对于非公平锁较低。</p>
+<p><img src="../../../../image/post/java-lock/fairLock.png" alt></p>
+<p> <img src="../../../../image/post/java-lock/unfairLock.png" alt></p>
+<ul>
+<li>可重入锁/非可重入锁</li>
+</ul>
+<p>可重入锁指持有锁的线程可以再次获取锁，也叫递归锁。而非可重入锁则不允许持有锁的线程再次获取该锁，此时会发生死锁。Java中synchronized和ReenterantLock都是可重入锁。</p>
+<p><img src="../../../../image/post/java-lock/reentrantLock.png" alt></p>
+<p> <img src="../../../../image/post/java-lock/unreentrantLock.png" alt></p>
+<ul>
+<li>共享锁/独占锁</li>
+</ul>
+<p>共享锁就是多个线程可以同时获取锁，独占锁也称排他锁，只允许一个线程拥有锁。synchronized和ReenterantLock都是独占锁，ReenterantReadWriteLock中的读锁是共享的。</p>
+<p>接下来，将对Java中的各种锁进行详细介绍。</p>
+<h2 id="synchronized"><a href="#synchronized" class="headerlink" title="synchronized"></a>synchronized</h2><h3 id="概念"><a href="#概念" class="headerlink" title="概念"></a>概念</h3><p>synchronized 是Java中加锁的关键字，被synchronized加锁的代码块同一时间只能有一个线程执行，其他线程必须等待。</p>
+<h3 id="应用"><a href="#应用" class="headerlink" title="应用"></a>应用</h3><p><strong>修饰实例方法</strong> 作用于实例对象，进入同步代码块前要先获取实例对象锁。</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">AccountingSync</span> <span class="keyword">implements</span> <span class="title">Runnable</span></span>&#123;</span><br><span class="line">    <span class="comment">//共享资源(临界资源)</span></span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">int</span> i=<span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * synchronized 修饰实例方法</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">increase</span><span class="params">()</span></span>&#123;</span><br><span class="line">        i++;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">for</span>(<span class="keyword">int</span> j=<span class="number">0</span>;j&lt;<span class="number">1000000</span>;j++)&#123;</span><br><span class="line">            increase();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> InterruptedException </span>&#123;</span><br><span class="line">        AccountingSync instance=<span class="keyword">new</span> AccountingSync();</span><br><span class="line">        Thread t1=<span class="keyword">new</span> Thread(instance);</span><br><span class="line">        Thread t2=<span class="keyword">new</span> Thread(instance);</span><br><span class="line">        t1.start();</span><br><span class="line">        t2.start();</span><br><span class="line">        </span><br><span class="line">        t1.join();</span><br><span class="line">        t2.join();</span><br><span class="line">        System.out.println(i);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>上述代码中，开启了俩个线程去执行i++，因为i++非原子性，使用加锁来保证线程安全。</p>
+<p>这里可以看到synchronized修饰的是实例方法，也就是说作用于实例对象，由于只创建了一个实例<code>instance</code>，线程执行increase方法时必须先获取instance锁。当t1获取到instance锁时，t2必须等到t1释放锁后，t2才能执行increase方法，如此一来便保证了线程安全。如果上述代码中去掉synchronized，结果很可能小于20000。如果创建了多个对象是否还能保证线程安全？答案显然是否定的。那么如何在创建了多个对象仍然保证线程安全？</p>
+<p><strong>修饰静态方法</strong> 作用于类的class对象，进入同步代码块前要先获取类的class对象锁。</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">AccountingSyncClass</span> <span class="keyword">implements</span> <span class="title">Runnable</span></span>&#123;</span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">int</span> i=<span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 作用于静态方法,锁是当前class对象,也就是</span></span><br><span class="line"><span class="comment">     * AccountingSyncClass类对应的class对象</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">increase</span><span class="params">()</span></span>&#123;</span><br><span class="line">        i++;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * 非静态,访问时锁不一样不会发生互斥</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">increase4Obj</span><span class="params">()</span></span>&#123;</span><br><span class="line">        i++;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">for</span>(<span class="keyword">int</span> j=<span class="number">0</span>;j&lt;<span class="number">1000000</span>;j++)&#123;</span><br><span class="line">            increase();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> InterruptedException </span>&#123;</span><br><span class="line">        <span class="comment">//new新实例</span></span><br><span class="line">        Thread t1=<span class="keyword">new</span> Thread(<span class="keyword">new</span> AccountingSyncClass());</span><br><span class="line">        <span class="comment">//new新实例</span></span><br><span class="line">        Thread t2=<span class="keyword">new</span> Thread(<span class="keyword">new</span> AccountingSyncClass());</span><br><span class="line">        <span class="comment">//启动线程</span></span><br><span class="line">        t1.start();</span><br><span class="line">        t2.start();</span><br><span class="line"></span><br><span class="line">        t1.join();</span><br><span class="line">        t2.join();</span><br><span class="line">        System.out.println(i);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>上述代码中，synchronized修饰的静态方法，锁对象是便是AccountingSyncClass类的class对象。这样创建无论几个实例也能保证线程安全。</p>
+<p><strong>修饰方法块</strong>，指定加锁对象，作用于指定对象，进入同步代码块前要先获取指定对象锁。</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">AccountingSync</span> <span class="keyword">implements</span> <span class="title">Runnable</span></span>&#123;</span><br><span class="line">    <span class="keyword">static</span> AccountingSync instance=<span class="keyword">new</span> AccountingSync();</span><br><span class="line">    <span class="keyword">static</span> <span class="keyword">int</span> i=<span class="number">0</span>;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">run</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="comment">//省略其他耗时操作....</span></span><br><span class="line">        <span class="comment">//使用同步代码块对变量i进行同步操作,锁对象为instance</span></span><br><span class="line">        <span class="keyword">synchronized</span>(instance)&#123;</span><br><span class="line">            <span class="keyword">for</span>(<span class="keyword">int</span> j=<span class="number">0</span>;j&lt;<span class="number">1000000</span>;j++)&#123;</span><br><span class="line">                    i++;</span><br><span class="line">              &#125;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> InterruptedException </span>&#123;</span><br><span class="line">        Thread t1=<span class="keyword">new</span> Thread(instance);</span><br><span class="line">        Thread t2=<span class="keyword">new</span> Thread(instance);</span><br><span class="line">        t1.start();</span><br><span class="line">        t2.start();</span><br><span class="line">        t1.join();</span><br><span class="line">        t2.join();</span><br><span class="line">        System.out.println(i);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>上述代码中，指定加锁对象是instance锁，当线程执行到同步块是需要首先获取instance锁。</p>
+<h3 id="原理"><a href="#原理" class="headerlink" title="原理"></a>原理</h3><h4 id="Monitor对象"><a href="#Monitor对象" class="headerlink" title="Monitor对象"></a>Monitor对象</h4><p>什么是Monitor？可以把它理解为 一个同步工具，也可以描述为 一种同步机制，它通常被描述为一个对象。在Java的设计中，每一个Java对象从创建出来就带有一把“锁”，称为内部锁或者Monitor锁。</p>
+<p>每一个对象都存在一个monitor与之关联，当一个monitor被个线程持有后，它便处于锁定状态。在Java虚拟机(HotSpot)中，monitor是由ObjectMonitor实现的，其主要数据结构如下（位于HotSpot虚拟机源码ObjectMonitor.hpp文件，C++实现的）</p>
+<figure class="highlight c++"><table><tr><td class="code"><pre><span class="line">ObjectMonitor() &#123;</span><br><span class="line">   _header       = <span class="literal">NULL</span>;</span><br><span class="line">   _count        = <span class="number">0</span>; <span class="comment">//记录个数</span></span><br><span class="line">   _waiters      = <span class="number">0</span>,</span><br><span class="line">   _recursions   = <span class="number">0</span>;</span><br><span class="line">   _object       = <span class="literal">NULL</span>;</span><br><span class="line">   _owner        = <span class="literal">NULL</span>;</span><br><span class="line">   _WaitSet      = <span class="literal">NULL</span>; <span class="comment">//处于wait状态的线程，会被加入到_WaitSet</span></span><br><span class="line">   _WaitSetLock  = <span class="number">0</span> ;</span><br><span class="line">   _Responsible  = <span class="literal">NULL</span> ;</span><br><span class="line">   _succ         = <span class="literal">NULL</span> ;</span><br><span class="line">   _cxq          = <span class="literal">NULL</span> ;</span><br><span class="line">   FreeNext      = <span class="literal">NULL</span> ;</span><br><span class="line">   _EntryList    = <span class="literal">NULL</span> ; <span class="comment">//处于等待锁block状态的线程，会被加入到该列表</span></span><br><span class="line">   _SpinFreq     = <span class="number">0</span> ;</span><br><span class="line">   _SpinClock    = <span class="number">0</span> ;</span><br><span class="line">   OwnerIsThread = <span class="number">0</span> ;</span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
+
+<p>在ObjectMonitor中有俩个队列，WaitSet和 EntryList，用来保存ObjectWaiter对象列表（每个等待获取锁的线程都会被封装成ObjectWaiter对象），owner用来保存持有ObjectMonitor对象的线程。</p>
+<p>当有多个线程访问同步代码时，先进入EntryList集合， 当获取到monitor后，owner指向该线程, 并把count加1。当线程调用wait()方法时，将释放持有的monitor，onwer复位为null, count减1，并进入WaitSet集合等待被唤醒。当线程执行完毕也将释放monitor，onwer复位为null, count减1。如下图所示：</p>
+<p><img src="../../../../image/post/java-lock/objectMonitor.jpg" alt></p>
+<h4 id="synchronized同步代码块"><a href="#synchronized同步代码块" class="headerlink" title="synchronized同步代码块"></a>synchronized同步代码块</h4><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SyncCodeBlock</span> </span>&#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">int</span> i;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">syncTask</span><span class="params">()</span></span>&#123;</span><br><span class="line">        <span class="keyword">synchronized</span> (<span class="keyword">this</span>)&#123;</span><br><span class="line">            i++;</span><br><span class="line">        &#125;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>编译上述代码，并使用 javap -verbose 命令获取反编译后的字节码如下: （省略非必要信息）</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">public class SyncCodeBlock</span><br><span class="line">  public void syncTask();</span><br><span class="line">    descriptor: ()V</span><br><span class="line">    flags: ACC_PUBLIC</span><br><span class="line">    Code:</span><br><span class="line">      stack=3, locals=3, args_size=1</span><br><span class="line">         0: aload_0</span><br><span class="line">         1: dup</span><br><span class="line">         2: astore_1</span><br><span class="line">         3: monitorenter					//进入同步方法</span><br><span class="line">         4: aload_0</span><br><span class="line">         5: dup</span><br><span class="line">         6: getfield      #2              </span><br><span class="line">         9: iconst_1</span><br><span class="line">        10: iadd</span><br><span class="line">        11: putfield      #2               </span><br><span class="line">        14: aload_1</span><br><span class="line">        15: monitorexit						//退出同步方法</span><br><span class="line">        16: goto          24</span><br><span class="line">        19: astore_2</span><br><span class="line">        20: aload_1</span><br><span class="line">        21: monitorexit						//退出同步方法</span><br><span class="line">        22: aload_2</span><br><span class="line">        23: athrow</span><br><span class="line">        24: return</span><br><span class="line">      Exception table:</span><br><span class="line">         from    to  target type</span><br><span class="line">             4    16    19   any</span><br><span class="line">            19    22    19   any</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>从上述的字节码中可知，同步语句块使用的是<strong>monitorenter</strong>和<strong>monitorexit</strong>指令，其中monitorenter指令指向同步代码快的开始位置，monitorexit指向同步代码块的结束位置。</p>
+<p>当执行monitorenter指令时，当前线程将试图获取 SyncCodeBlock实例锁所对应的monitor的持有权。当当前线程获取到monitor时，则monitor的owner指向当前线程，count加1，获取锁成功。当有其他线程尝试获取锁时，则会进入monitor的EntryList或者WaitList等待。</p>
+<p>上述字节码中还有一点，有一个monitorenter,却有俩个monitorexit。正常情况下，同步代码块执行完毕释放monitor，但是如果如果同步代码块发生异常会无法执行monitorexit，这样monitor就无法释放。这个时候第二个monitorexit就起到作用了，它就是异常结束时释放monitor的指令。</p>
+<h4 id="synchronized同步方法"><a href="#synchronized同步方法" class="headerlink" title="synchronized同步方法"></a>synchronized同步方法</h4><figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SyncCodeBlock</span> </span>&#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">int</span> i;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">syncTask</span><span class="params">()</span></span>&#123;</span><br><span class="line">        i++;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>反编译字节码如下（省略相关性不高内容）</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">public synchronized void syncTask();</span><br><span class="line">    descriptor: ()V</span><br><span class="line">    flags: ACC_PUBLIC, ACC_SYNCHRONIZED</span><br><span class="line">    Code:</span><br><span class="line">      stack=3, locals=1, args_size=1</span><br><span class="line">         0: aload_0</span><br><span class="line">         1: dup</span><br><span class="line">         2: getfield      #2                  // Field i:I</span><br><span class="line">         5: iconst_1</span><br><span class="line">         6: iadd</span><br><span class="line">         7: putfield      #2                  // Field i:I</span><br><span class="line">        10: return</span><br><span class="line">      LineNumberTable:</span><br><span class="line">        line 16: 0</span><br><span class="line">        line 17: 10</span><br></pre></td></tr></table></figure>
+
+<p>从字节码中可以看到，synchronized修饰的方法并没有monitorenter和monitorexit指令，但是flag中多了一个ACC_SYNCHRONIZED。这个ACC_SYNCHRONIZED用来表明该方法是一个同步方法，JVM通过这个flag执行相应的同步调用，类似同步方法块，这里就不再赘述。</p>
+<p>以上便是synchronized锁的基本原理。</p>
+<h3 id="优化"><a href="#优化" class="headerlink" title="优化"></a>优化</h3><p>从上一节的内容中了解到，synchronized的实现依赖于对象的monitor实现，而monitor又是基于底层操作系统的Mutex Lock实现，而基于Mutex Lock实现的同步必须经历从用户态到内核态的转换，这个开销太大，频繁的通过synchronized实现同步会严重影响程序的效率，这也是synchronized被称为重量锁的原因。</p>
+<p>JDK1.6之后对synchronized做了优化，引入“偏向锁”和“轻量级锁”。JDK1.6以后锁一种有四种状态，无锁，偏向锁，轻量级锁，重量级锁，它们会随着锁的竞争而逐渐升级，而且锁可以从无锁升级到重量级锁，但是不能降级。</p>
+<p>在讲锁如何升级之前先来看一下锁状态保存的位置</p>
+<h4 id="Java-对象头（header）"><a href="#Java-对象头（header）" class="headerlink" title="Java 对象头（header）"></a>Java 对象头（header）</h4><p>在HotSpot虚拟机中，对象在内存中存储的布局可以分为三部分：对象头（header）,实例数据（data）和对齐填充（padding）。</p>
+<p>普通对象的header包含俩部分：Mark Word和Class Metadata Address，数组对象还包括一个Array Length。synchronized用的锁就存在Mark Word中</p>
+<table>
+<thead>
+<tr>
+<th>长度</th>
+<th>内容</th>
+<th>说明</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>32/64bit</td>
+<td>Mark Word</td>
+<td>对象的HashCode, GC分代年龄，锁状态标志，线程持有的锁，偏向线程ID，偏向时间戳等等，存储对象运行时数据。</td>
+</tr>
+<tr>
+<td>32/64bit</td>
+<td>Class Metadata Address</td>
+<td>类型指针指向对象的类元数据</td>
+</tr>
+<tr>
+<td>32/64bit</td>
+<td>Array length</td>
+<td>数组长度</td>
+</tr>
+</tbody></table>
+<p>下表是Mark Word在32bit JVM的存储结构</p>
+<p><img src="../../../../image/post/java-lock/MarkWord.jpg" alt></p>
+<h4 id="锁状态转化"><a href="#锁状态转化" class="headerlink" title="锁状态转化"></a>锁状态转化</h4><p>关于这四种锁状态是如何转换的，如下图所示：</p>
+<p><img src="../../../../image/post/java-lock/lock-upgrade.jpg" alt></p>
+<ol>
+<li><p>偏向锁</p>
+<p>在分配对象的时候可根据class元数据中bias位来确认，该类型的对象是否允许被偏向锁定。如果允许，就如图上图中左边一支，此时的hashcode位被Thread Id和epoch占位（如果显式调用对象的hashcode（）方法，thread Id和epoch会被hashcode重新占位）。初始状态下为<strong>匿名偏向(Anonymously biased)</strong>，此状态下thread Id为0，意味着这个偏向锁还没有偏向线程。当第一个线程试图获取该锁时，采用CAS将thread ID为本线程ID。</p>
+</li>
+</ol>
+<ul>
+<li><p>偏向锁-无锁，偏向锁-轻量级锁</p>
+<p>当有其他线程尝试获取偏向锁时，会首先检查thread ID是否为本线程ID，如果不是，则CAS替换。这个时候替换的期望值时0。如果CAS失败，说明该偏向锁不再处于<strong>有同步无竞争状态</strong>，需要升级或撤销。在HotSpot中偏向锁的撤销时JVM处于在全局安全点被执行的（stop-the-world），在撤销过程中，撤销者会遍历当前偏向线程的锁记录，由此判断当前对象是否被锁定。如果偏向锁被线程持有，则升级偏向锁到轻量级锁，如果未被持有，则偏向锁重偏向或者进入无锁状态。这里进入重偏向或者撤销偏向锁至无锁，取决于偏向锁重偏向次数与相隔时间，如果频繁重偏向说明此场景不适合偏向锁，则撤销。</p>
+</li>
+<li><p>无锁-轻量级锁</p>
+<p>如果对象处于无锁状态时（锁标志位01），JVM首先将当前线程的栈中建立一个名为锁记录（Lock Record）的空间，用于存储锁对象目前的Mark Word拷贝。然后CAS尝试将对象的Mark Word更新为指向Lock Record的指针。如果更新成功，那么该线程就获取到了锁，并且将锁标记为替换位00。</p>
+<p>如果获取失败，首先检查Mark Word是否指向当前线程的栈帧，如果是则执行，如果不是尝试自旋。如果有俩个以上的线程竞争同一个锁，那轻量级锁不再有效，要膨胀位重量级锁，锁状态值变为10。Mark Word中存储的就是指向重量级锁的指针，后面等待的线程要进入阻塞状态。</p>
+<p>轻量锁的解锁过程也是利用CAS进行，将栈帧中锁记录替换回原来的Mark Word中，如果替换成功，整个同步过程就完了，如果失败，则说明有其他线程尝试过获取该锁，那么就要在释放锁的同时，唤醒被挂起的线程。</p>
+</li>
+<li><p>无锁-重量级锁</p>
+<p>当锁升级为重量级锁，锁标记为替换为10，线程获取重量级锁失败后将直接进入Monitor的WaitSet队列中。</p>
+<p>下图是一张详细过程图</p>
+</li>
+</ul>
+<p><img src="../../../../image/post/java-lock/synchronizedImprove.png" alt></p>
+<h4 id="锁状态的对比"><a href="#锁状态的对比" class="headerlink" title="锁状态的对比"></a>锁状态的对比</h4><table>
+<thead>
+<tr>
+<th>锁状态</th>
+<th>优点</th>
+<th>缺点</th>
+<th>适用场景</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>偏向锁</td>
+<td>消耗小，替换线程ID就行</td>
+<td>如果存在竞争，会带来锁撤销的消耗</td>
+<td>只有一个线程访问同步块</td>
+</tr>
+<tr>
+<td>轻量锁</td>
+<td>竞争的线程不会阻塞，提升响应速度</td>
+<td>如果始终得不到锁，自旋会会消耗CPU</td>
+<td>追求响应速度，同步块很快</td>
+</tr>
+<tr>
+<td>重量锁</td>
+<td>线程竞争直接挂起，不会消耗CPU</td>
+<td>线程阻塞，响应时间缓慢</td>
+<td>追求吞吐量，同步块执行速度慢</td>
+</tr>
+</tbody></table>
+<h3 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h3><ol>
+<li>synchronized是java加锁的关键字，可修饰实例方法，静态方法或者方块；</li>
+<li>synchronized的依赖于monitor对象，而monitor对象的实现基于底层操作系统Mutex Lock的实现；</li>
+<li>基于Mutex Lock实现的同步需从用户态切换到内核态，消耗大，成本高，这也是synchronized被称为重量锁的缘由；</li>
+<li>JDK1.6对synchronized做了大量优化，加入偏向锁和轻量级锁俩种锁状态；</li>
+<li>锁状态信息存储在java对象头中。</li>
+</ol>
+<h2 id="volatile"><a href="#volatile" class="headerlink" title="volatile"></a>volatile</h2><h4 id="概念-1"><a href="#概念-1" class="headerlink" title="概念"></a>概念</h4><p>volatile常被称为<code>轻量synchronized</code>，在并发编程中也是很重要的一个角色。</p>
+<p>volatile是Java的一个关键字，用来修饰共享变量。</p>
+<h4 id="作用"><a href="#作用" class="headerlink" title="作用"></a>作用</h4><h5 id="LOCK前缀"><a href="#LOCK前缀" class="headerlink" title="LOCK前缀"></a>LOCK前缀</h5><p>有以下一段java代码如下：</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">instance = <span class="keyword">new</span> Singleton(); <span class="comment">// instance是volatile变量</span></span><br></pre></td></tr></table></figure>
+
+<p>转变成汇编代码。如下：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">0x01a3de1d: movb $0×0,0×1104800(%esi);0x01a3de24: lock addl $0×0,(%esp);</span><br></pre></td></tr></table></figure>
+
+<p>可以看到多了一层lock前缀，在intel手册中对lock前缀的说明如下：</p>
+<ol>
+<li><strong>确保对内存的读-改-写操作原子执行</strong>。在Pentium及Pentium之前的处理器中，带有lock前缀的指令在执行期间会锁住总线，使得其他处理器暂时无法通过总线访问内存。很显然，这会带来昂贵的开销。从Pentium 4，Intel Xeon及P6处理器开始，intel在原有总线锁的基础上做了一个很有意义的优化：如果要访问的内存区域（area of memory）在lock前缀指令执行期间已经在处理器内部的缓存中被锁定（即包含该内存区域的缓存行当前处于独占或以修改状态），并且该内存区域被完全包含在单个缓存行（cache line）中，那么处理器将直接执行该指令。由于在指令执行期间该缓存行会一直被锁定，其它处理器无法读/写该指令要访问的内存区域，因此能保证指令执行的原子性。这个操作过程叫做缓存锁定（cache locking），缓存锁定将大大降低lock前缀指令的执行开销，但是当多处理器之间的竞争程度很高或者指令访问的内存地址未对齐时，仍然会锁住总线。</li>
+<li><strong>禁止该指令与之前和之后的读和写指令重排序</strong>。</li>
+<li><strong>把写缓冲区中的所有数据刷新到内存中</strong>。</li>
+</ol>
+<p>则被volatile修饰的变量包含俩层含义</p>
+<ul>
+<li><p>保证内存可见性</p>
+<p>volatile使用Lock前缀的指令禁止线程本地内存缓存（CPU缓存），参考lock前缀说明第3条。</p>
+<p>线程写入变量时不会写入本地内存而是会直接刷新回主存。又因为CPU实现了缓存一致性协议，在变量写回后会通知其他CPU中缓存的此变量无效，这样其他CPU在处理该变量时会从主存中读取。</p>
+</li>
+</ul>
+<ul>
+<li><p>静止指令重排序</p>
+<p>为了提升计算效率，CPU可能会将指令重排序，但这样会影响到多线程并发执行的正确性。</p>
+<p>禁止指令重排序有两层意思：1）当程序执行到volatile变量的读操作或者写操作时，在其前面的操作的更改肯定全部已经进行，且结果已经对后面的操作可见；在其后面的操作肯定还没有进行； 2）在进行指令优化时，不能将在对volatile变量访问的语句放在其后面执行，也不能把volatile变量后面的语句放到其前面执行，参考lock前缀指令第2条。</p>
+</li>
+</ul>
+<p>volatile满足可见性和顺序性，那依据lock前缀说明第一条<strong>原子执行</strong>，那么它不是还满足原子性？</p>
+<p>我们先来看下面的例子。</p>
+<h4 id="应用-1"><a href="#应用-1" class="headerlink" title="应用"></a>应用</h4><h5 id="错误示例"><a href="#错误示例" class="headerlink" title="错误示例"></a>错误示例</h5><p>来看下面这个例子</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Test</span> </span>&#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">volatile</span> <span class="keyword">int</span> inc = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">increase</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        inc++;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">final</span> Test test = <span class="keyword">new</span> Test();</span><br><span class="line">        <span class="keyword">for</span>(<span class="keyword">int</span> i=<span class="number">0</span>;i&lt;<span class="number">10</span>;i++)&#123;</span><br><span class="line">            <span class="keyword">new</span> Thread(() -&gt; &#123;</span><br><span class="line">                <span class="keyword">for</span>(<span class="keyword">int</span> j=<span class="number">0</span>;j&lt;<span class="number">1000</span>;j++) &#123;</span><br><span class="line">                    test.increase();</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;).start();</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">//保证前面的线程都执行完</span></span><br><span class="line">        <span class="keyword">while</span>(Thread.activeCount()&gt;<span class="number">1</span>)  &#123;</span><br><span class="line">            Thread.yield();</span><br><span class="line">        &#125;</span><br><span class="line">        System.out.println(test.inc);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>例子中启动了10个线程去执行1000次i++,那么结果会是多少呢？</p>
+<p>答案是一个小于10000的数，并不是理想的10000。</p>
+<p>假设这样一个场景，线程1从主存中读取到i的值等于0，将i的值在寄存器中+1，这时候并没有更新i，还只是一个中间值。然后线程2从主存中读取i的值，这个时候因为线程1没有更新i，虽然线程2依然从主存中读取数据，但是读取到的值是0，线程2计算后i=1刷新回主存，由于线程2更新了i，所以线程1中的i=0缓存失效，将i=1重新读取到缓存中，接着线程1恢复，将i=1写回缓存再刷新回主存。这样就导致了计算结果小于预期。</p>
+<p>那么为什么volatile不是原子性的？</p>
+<p>首先来看一下，inc++其实时三部分组成，读值，加1，写值，而volatile修饰的变量，会在读命令前lock前缀，在写值命令前加lock前缀，这是什么意思呢？</p>
+<p>读，是原子性的，写，是原子性的，读-改-写不是原子性的！</p>
+<h5 id="正确用法"><a href="#正确用法" class="headerlink" title="正确用法"></a>正确用法</h5><p>虽然volatile容易出错，但是如果正确使用在某些场景下要比synchronized要高效很多。</p>
+<p>要正确使用volatile就要牢记volatile的限制——<strong>只有在状态真正独立于程序内其他内容时才能使用volatile</strong>。</p>
+<ul>
+<li><p>状态标志</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">volatile</span> <span class="keyword">static</span> <span class="keyword">boolean</span> shutdownRequested = <span class="keyword">false</span>;</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">shutdown</span><span class="params">()</span> </span>&#123; shutdownRequested = <span class="keyword">true</span>; &#125;</span><br><span class="line"> </span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">doWork</span><span class="params">()</span> </span>&#123; </span><br><span class="line">    <span class="keyword">while</span> (!shutdownRequested) &#123; </span><br><span class="line">        <span class="comment">// do stuff</span></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>利用volatile的可见性，当有线程调用shutdown()，可以立刻检测到。</p>
+</li>
+<li><p>double check</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="class"><span class="keyword">class</span> <span class="title">Singleton</span></span>&#123;</span><br><span class="line">    <span class="keyword">private</span> <span class="keyword">volatile</span> <span class="keyword">static</span> Singleton instance = <span class="keyword">null</span>;</span><br><span class="line"> </span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> Singleton <span class="title">getInstance</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">if</span>(instance==<span class="keyword">null</span>) &#123;</span><br><span class="line">            <span class="keyword">synchronized</span> (Singleton.class) &#123;</span><br><span class="line">                <span class="keyword">if</span>(instance==<span class="keyword">null</span>)</span><br><span class="line">                    instance = <span class="keyword">new</span> Singleton();</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;</span><br><span class="line">        <span class="keyword">return</span> instance;</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这是一个单例模式的double check例子，首先来讲一下如果不加volatile会怎么样</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">private</span>  tatic Singleton instance = <span class="keyword">null</span>;</span><br><span class="line">  </span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> Singleton <span class="title">getInstance</span><span class="params">()</span> </span>&#123;</span><br><span class="line">       <span class="keyword">if</span>(instance==<span class="keyword">null</span>) &#123;</span><br><span class="line">           <span class="keyword">synchronized</span> (Singleton.class) &#123;</span><br><span class="line">               <span class="keyword">if</span>(instance==<span class="keyword">null</span>)</span><br><span class="line">                   instance = <span class="keyword">new</span> Singleton();</span><br><span class="line">           &#125;</span><br><span class="line">       &#125;</span><br><span class="line">     <span class="keyword">return</span> instance;</span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
+
+<p>执行顺序是</p>
+<ol>
+<li>第一次检测instance是否为null，如果否进行第二步</li>
+<li>获取锁</li>
+<li>第二次检测instance是否为null，如果否初始化instance</li>
+</ol>
+<p>这样看起来没什么问题，但是有一个由于指令乱序造成的隐患。</p>
+<p>初始化instance可分解为三个步骤：</p>
+<ol>
+<li>分配内存空间（memory = allocate()）</li>
+<li>初始化对象（ctorInstance(memory)）</li>
+<li>将对象指向刚分配好的内存空间（instance = memory）</li>
+</ol>
+<p>但是，编译器为了性能的原因，可能将2，3俩步重排序，然后结构就成了：</p>
+<ol>
+<li>分配内存空间</li>
+<li>将对象指向刚分配好的内存空间</li>
+<li>初始化对象</li>
+</ol>
+<p>这样重排序后会发生以下这种场景</p>
+<table>
+<thead>
+<tr>
+<th>Time</th>
+<th>Thread A</th>
+<th>Thread B</th>
+</tr>
+</thead>
+<tbody><tr>
+<td>t1</td>
+<td>instance==null</td>
+<td></td>
+</tr>
+<tr>
+<td>t2</td>
+<td>获取锁</td>
+<td></td>
+</tr>
+<tr>
+<td>t3</td>
+<td>再次instance==null</td>
+<td></td>
+</tr>
+<tr>
+<td>t4</td>
+<td>分配内存空间</td>
+<td></td>
+</tr>
+<tr>
+<td>t5</td>
+<td>指向内存空间</td>
+<td></td>
+</tr>
+<tr>
+<td>t6</td>
+<td></td>
+<td>检测instance!=null</td>
+</tr>
+<tr>
+<td>t7</td>
+<td></td>
+<td>访问instance（此时isntance尚未初始化）</td>
+</tr>
+<tr>
+<td>t8</td>
+<td>初始化instance</td>
+<td></td>
+</tr>
+</tbody></table>
+<p>这个问题的解决方案就是将instance修饰为volatile，volatile会禁止步骤2，3的重排序。</p>
+</li>
+</ul>
+<h4 id="总结-1"><a href="#总结-1" class="headerlink" title="总结"></a>总结</h4><ul>
+<li>volatile关键用来修饰共享变量，被volatile修饰包含俩层含义，可见性和顺序性。</li>
+<li>volatile不保证原子性，所以不能用synchronized一样使用</li>
+</ul>
+<h2 id="CAS"><a href="#CAS" class="headerlink" title="CAS"></a>CAS</h2><h3 id="概念-2"><a href="#概念-2" class="headerlink" title="概念"></a>概念</h3><p>CAS全称是compare and swap, 是一种在并发编程中的同步机制。CAS不是Java特有，是操作系统提供的机制。CAS操作包含三个操作数，内存位置，预期值和新值。CAS的实现逻辑是将内存位置的数值与预期值相比较，如果相等，则将内存位置处的值替换为新值，如果不相等，则不替换。</p>
+<h3 id="作用-1"><a href="#作用-1" class="headerlink" title="作用"></a>作用</h3><p>在讲volatile的时候有用过一个例子</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">Test</span> </span>&#123;</span><br><span class="line">    <span class="keyword">public</span> <span class="keyword">volatile</span> <span class="keyword">int</span> inc = <span class="number">0</span>;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">increase</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        inc++;</span><br><span class="line">    &#125;</span><br><span class="line"></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> </span>&#123;</span><br><span class="line">        <span class="keyword">final</span> Test test = <span class="keyword">new</span> Test();</span><br><span class="line">        <span class="keyword">for</span>(<span class="keyword">int</span> i=<span class="number">0</span>;i&lt;<span class="number">10</span>;i++)&#123;</span><br><span class="line">            <span class="keyword">new</span> Thread(() -&gt; &#123;</span><br><span class="line">                <span class="keyword">for</span>(<span class="keyword">int</span> j=<span class="number">0</span>;j&lt;<span class="number">1000</span>;j++) &#123;</span><br><span class="line">                    test.increase();</span><br><span class="line">                &#125;</span><br><span class="line">            &#125;).start();</span><br><span class="line">        &#125;</span><br><span class="line"></span><br><span class="line">        <span class="comment">//保证前面的线程都执行完</span></span><br><span class="line">        <span class="keyword">while</span>(Thread.activeCount()&gt;<span class="number">1</span>)  &#123;</span><br><span class="line">            Thread.yield();</span><br><span class="line">        &#125;</span><br><span class="line">        System.out.println(test.inc);</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>由于volatile无法保证原子性，所以存在线程安全问题。</p>
+<p>解决办法：</p>
+<ul>
+<li>使用synchronized修饰increase()方法</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">increase</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        inc++;</span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li>使用Java atomic包中的并发包原子操作类</li>
+</ul>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="keyword">static</span> AtomicInteger race = <span class="keyword">new</span> AtomicInteger();</span><br><span class="line"></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">increase</span><span class="params">()</span> </span>&#123;</span><br><span class="line">     race.getAndIncrement();</span><br><span class="line"> &#125;</span><br></pre></td></tr></table></figure>
+
+<p>atomic包中的原子类利用的就是CAS算法，getAndIncrement()就是原子操作加1。</p>
+<h3 id="原理-1"><a href="#原理-1" class="headerlink" title="原理"></a>原理</h3><p>先来看一下ActomicInteger中的源码</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">  <span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">int</span> <span class="title">getAndIncrement</span><span class="params">()</span> </span>&#123;</span><br><span class="line">        <span class="keyword">return</span> unsafe.getAndAddInt(<span class="keyword">this</span>,valueOffset, <span class="number">1</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>再深入到unsafe类中</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">final</span> <span class="keyword">int</span> <span class="title">getAndAddInt</span><span class="params">(Object var1, <span class="keyword">long</span> var2, <span class="keyword">int</span> var4)</span> </span>&#123;</span><br><span class="line">       <span class="keyword">int</span> var5;</span><br><span class="line">       <span class="keyword">do</span> &#123;</span><br><span class="line">           var5 = <span class="keyword">this</span>.getIntVolatile(var1, var2);</span><br><span class="line">       &#125; <span class="keyword">while</span>(!<span class="keyword">this</span>.compareAndSwapInt(var1, var2, var5, var5 + var4));</span><br><span class="line">       <span class="keyword">return</span> var5;</span><br><span class="line">   &#125;</span><br></pre></td></tr></table></figure>
+
+<p>unsafe 的 <code>getIntVolatile</code>是一个native方法, va1是AtomicInteger实例， var2是地址偏移量，var5就是AtomicInteger中保存的值了</p>
+<p>重点来了，<code>compareAndSwapInt(var1, var2, var5, var5 + var4)</code>方法，从方法名就可以看出这是CAS的关键，var5 是期望值，var5+var4是更新值，如果更新成功，则任务结束，如果失败则以自旋的方式继续进行CAS操作。</p>
+<p>再深入到<code>compareAndSwapInt(Object var1, long var2, int var4, int var5)</code>，在HotSpot UnSafe.cpp里找到它的实现</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">UNSAFE_ENTRY(jboolean, Unsafe_CompareAndSwapInt(JNIEnv *env, jobject unsafe, jobject obj, jlong offset, jint e, jint x))</span><br><span class="line">  UnsafeWrapper(<span class="string">"Unsafe_CompareAndSwapInt"</span>);</span><br><span class="line">  oop p = JNIHandles::resolve(obj);</span><br><span class="line">  jint* addr = (jint *) index_oop_from_field_offset_long(p, offset);</span><br><span class="line">  <span class="keyword">return</span> (jint)(Atomic::cmpxchg(x, addr, e)) == e;</span><br><span class="line">UNSAFE_END</span><br></pre></td></tr></table></figure>
+
+<p>可以看到这里调用<code>Atomic::cmpxchg(x, addr, e)</code>，其中x是更新值，addr是偏移地址，e是旧值。</p>
+<p>再来看一段Linux平台上<code>cmpxchg</code>的实现</p>
+<figure class="highlight c++"><table><tr><td class="code"><pre><span class="line"><span class="keyword">inline</span> jint     Atomic::cmpxchg    (jint     exchange_value, <span class="keyword">volatile</span> jint*     dest, jint     compare_value) &#123;</span><br><span class="line">  <span class="keyword">int</span> mp = os::is_MP();</span><br><span class="line">  __<span class="function">asm__ <span class="title">volatile</span> <span class="params">(LOCK_IF_MP(%<span class="number">4</span>) <span class="string">"cmpxchgl %1,(%3)"</span></span></span></span><br><span class="line"><span class="function"><span class="params">                    : <span class="string">"=a"</span> (exchange_value)</span></span></span><br><span class="line"><span class="function"><span class="params">                    : <span class="string">"r"</span> (exchange_value), <span class="string">"a"</span> (compare_value), <span class="string">"r"</span> (dest), <span class="string">"r"</span> (mp)</span></span></span><br><span class="line"><span class="function"><span class="params">                    : <span class="string">"cc"</span>, <span class="string">"memory"</span>)</span></span>;</span><br><span class="line">  <span class="keyword">return</span> exchange_value;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<ul>
+<li><p><code>os::is_MP()</code>: 判断当前系统是否为多核，如果多核就要在总线锁。</p>
+</li>
+<li><p><code>_asm_</code>说明是ASM汇编， <code>volatile</code>禁止编译器优化</p>
+</li>
+<li><p>重点来了， <code>LOCK_IF_MP(%4) &quot;cmpxchgl %1,(%3)&quot;</code>这是是一段汇编模板，它的意思是如果是多核系统就给 <code>cmpxchgl</code>CPU指令加<code>LOCK</code>前缀，其中<code>cmpxchgl</code>指令就是具体实现CAS的指令，做比较后替换操作。具体查看<a href="http://faydoc.tripod.com/cpu/cmpxchg.htm" target="_blank" rel="noopener">CMPXCHG</a>。</p>
+</li>
+</ul>
+<p>我们回忆一下前面讲到LOCK前缀意义：</p>
+<ol>
+<li>确保对内存的读-改-写操作原子执行。</li>
+<li>禁止该指令与之前和之后的读和写指令重排序。</li>
+<li>把写缓冲区中的所有数据刷新到内存中。</li>
+</ol>
+<p>其中第1点保证了cpmxchg指令的原子性，第2点和第三点起到内存屏障效果，类似volatile。</p>
+<h3 id="缺点"><a href="#缺点" class="headerlink" title="缺点"></a>缺点</h3><p>CAS虽然高效的解决了原子操作问题，但是仍然存在俩大问题。</p>
+<ol>
+<li><p>循环操作开销大</p>
+<p>在执行getAndAddInt()方法时，如果CAS失败会一直尝试，如果CAS一直不成功，会给CPU带来很大开销</p>
+</li>
+<li><p>ABA问题</p>
+<p>如果初次读取的值为A，在准备赋值的时候曾经被改变成B，之后又被改变成A，这个时候CAS赋值会认为依然时原来的旧值A。</p>
+</li>
+</ol>
+<h3 id="总结-2"><a href="#总结-2" class="headerlink" title="总结"></a>总结</h3><ul>
+<li>CAS可以高效解决原子操作问题；</li>
+<li>CAS操作是基于底层LOCK前缀加cpmxchg指令实现；</li>
+<li>CAS有循环开销大，ABA俩大问题。</li>
+</ul>
+
+                <hr>
+                
+
+                <ul class="pager">
+                    
+                    <li class="previous">
+                        <a href="/blog/2019/09/17/2019-9-17-java-lock(2)/" data-toggle="tooltip" data-placement="top"
+                           title="深入理解Java锁(下)">&larr; Previous Post</a>
+                    </li>
+                    
+                    
+                    <li class="next">
+                        <a href="/blog/2018/10/23/2018-10-23-simple-Quartz-second/" data-toggle="tooltip" data-placement="top"
+                           title="Quartz简单入门（二）">Next Post &rarr;</a>
+                    </li>
+                    
+                </ul>
+
+                
+
+                
+
+
+                <!--加入新的评论系统-->
+                
+
+                
+
+            </div>
+
+            <div class="hidden-xs col-sm-3 toc-col">
+                <div class="toc-wrap">
+                    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#前言"><span class="toc-text">前言</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#什么是锁"><span class="toc-text">什么是锁</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#为什么需要锁"><span class="toc-text">为什么需要锁</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#CPU-cache"><span class="toc-text">CPU cache</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#缓存不一致的解决"><span class="toc-text">缓存不一致的解决</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#JMM"><span class="toc-text">JMM</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#线程安全问题"><span class="toc-text">线程安全问题</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Java锁分类"><span class="toc-text">Java锁分类</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#synchronized"><span class="toc-text">synchronized</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#概念"><span class="toc-text">概念</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#应用"><span class="toc-text">应用</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#原理"><span class="toc-text">原理</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#Monitor对象"><span class="toc-text">Monitor对象</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#synchronized同步代码块"><span class="toc-text">synchronized同步代码块</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#synchronized同步方法"><span class="toc-text">synchronized同步方法</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#优化"><span class="toc-text">优化</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#Java-对象头（header）"><span class="toc-text">Java 对象头（header）</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#锁状态转化"><span class="toc-text">锁状态转化</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#锁状态的对比"><span class="toc-text">锁状态的对比</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#总结"><span class="toc-text">总结</span></a></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#volatile"><span class="toc-text">volatile</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#概念-1"><span class="toc-text">概念</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#作用"><span class="toc-text">作用</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#LOCK前缀"><span class="toc-text">LOCK前缀</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#应用-1"><span class="toc-text">应用</span></a><ol class="toc-child"><li class="toc-item toc-level-5"><a class="toc-link" href="#错误示例"><span class="toc-text">错误示例</span></a></li><li class="toc-item toc-level-5"><a class="toc-link" href="#正确用法"><span class="toc-text">正确用法</span></a></li></ol></li><li class="toc-item toc-level-4"><a class="toc-link" href="#总结-1"><span class="toc-text">总结</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#CAS"><span class="toc-text">CAS</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#概念-2"><span class="toc-text">概念</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#作用-1"><span class="toc-text">作用</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#原理-1"><span class="toc-text">原理</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#缺点"><span class="toc-text">缺点</span></a></li><li class="toc-item toc-level-3"><a class="toc-link" href="#总结-2"><span class="toc-text">总结</span></a></li></ol></li></ol>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Sidebar Container -->
+
+            <div class="
+                col-lg-8 col-lg-offset-2
+                col-md-10 col-md-offset-1
+                sidebar-container">
+
+                <!-- Featured Tags -->
+                
+                <section>
+                    <!-- no hr -->
+                    <h5 class="text-center">
+                        <a href="/blog/tags/">FEATURED TAGS</a>
+                    </h5>
+                    <div class="tags">
+                        
+                        <a class="tag" href="/blog/tags/#java"
+                           title="java">java</a>
+                        
+                        <a class="tag" href="/blog/tags/#lock"
+                           title="lock">lock</a>
+                        
+                    </div>
+                </section>
+                
+
+                <!-- Friends Blog -->
+                
+            </div>
+        </div>
+
+    </div>
+</article>
+
+
+
+
+
+
+
+<!-- Footer -->
+<!-- Footer -->
+<footer>
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1 text-center">
+                <br>
+                <ul class="list-inline text-center">
+                
+                
+                    <li>
+                        <a target="_blank" href="https://twitter.com/ehazon">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x"></i>
+                                <i class="fa fa-twitter fa-stack-1x fa-inverse"></i>
+                            </span>
+                        </a>
+                    </li>
+                
+                
+                    <li>
+                        <a target="_blank" href="https://www.zhihu.com/people/megahertz">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x"></i>
+                                <i class="fa  fa-stack-1x fa-inverse">知</i>
+                            </span>
+                        </a>
+                    </li>
+                
+
+                
+                    <li>
+                        <a target="_blank" href="http://weibo.com/haojen">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x"></i>
+                                <i class="fa fa-weibo fa-stack-1x fa-inverse"></i>
+                            </span>
+                        </a>
+                    </li>
+                
+
+                
+
+                
+                    <li>
+                        <a target="_blank"  href="https://github.com/haojen">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x"></i>
+                                <i class="fa fa-github fa-stack-1x fa-inverse"></i>
+                            </span>
+                        </a>
+                    </li>
+                
+
+                
+
+                </ul>
+                <p class="copyright text-muted">
+                    Copyright &copy; luli 2019
+                    <br>
+                    <span id="busuanzi_container_site_pv" style="font-size: 12px;">PV: <span id="busuanzi_value_site_pv"></span> Times</span>
+                    <br>
+                    Theme by <a href="https://haojen.github.io/">Haojen Ma</a>
+                </p>
+
+            </div>
+        </div>
+    </div>
+</footer>
+
+<!-- jQuery -->
+<script src="/blog/js/jquery.min.js"></script>
+
+<!-- Bootstrap Core JavaScript -->
+<script src="/blog/js/bootstrap.min.js"></script>
+
+<!-- Custom Theme JavaScript -->
+<script src="/blog/js/blog.js"></script>
+
+<!-- async load function -->
+<script>
+    function async(u, c) {
+      var d = document, t = 'script',
+          o = d.createElement(t),
+          s = d.getElementsByTagName(t)[0];
+      o.src = u;
+      if (c) { o.addEventListener('load', function (e) { c(null, e); }, false); }
+      s.parentNode.insertBefore(o, s);
+    }
+</script>
+
+<!-- jquery.tagcloud.js -->
+<script>
+    // only load tagcloud.js in tag.html
+    if($('#tag_cloud').length !== 0){
+        async("http://tamlover.github.io/blog/js/jquery.tagcloud.js",function(){
+            $.fn.tagcloud.defaults = {
+                //size: {start: 1, end: 1, unit: 'em'},
+                color: {start: '#bbbbee', end: '#0085a1'},
+            };
+            $('#tag_cloud a').tagcloud();
+        })
+    }
+</script>
+
+<!--fastClick.js -->
+<script>
+    async("//cdn.bootcss.com/fastclick/1.0.6/fastclick.min.js", function(){
+        var $nav = document.querySelector("nav");
+        if($nav) FastClick.attach($nav);
+    })
+</script>
+
+
+
+<!-- Google Analytics -->
+
+
+
+<!-- Baidu Tongji -->
+
+
+<!-- swiftype -->
+<script type="text/javascript">
+  (function(w,d,t,u,n,s,e){w['SwiftypeObject']=n;w[n]=w[n]||function(){
+  (w[n].q=w[n].q||[]).push(arguments);};s=d.createElement(t);
+  e=d.getElementsByTagName(t)[0];s.async=1;s.src=u;e.parentNode.insertBefore(s,e);
+  })(window,document,'script','//s.swiftypecdn.com/install/v2/st.js','_st');
+
+  _st('install','','2.0.0');
+</script>
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+<!--wechat title img-->
+<img class="wechat-title-img" src="">
+</body>
+
+</html>

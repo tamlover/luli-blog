@@ -1,0 +1,439 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<!-- Head tag -->
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="陆离的博客">
+    <meta name="keyword" content>
+    <meta name="theme-color" content="#600090">
+    <meta name="msapplication-navbutton-color" content="#600090">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="#600090">
+    <link rel="shortcut icon" href="https://cdn4.iconfinder.com/data/icons/ionicons/512/icon-person-128.png">
+    <link rel="alternate" type="application/atom+xml" title="luli" href="/atom.xml">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/animate.css/3.5.2/animate.min.css">
+    <link rel="stylesheet" href="//cdn.bootcss.com/font-awesome/4.6.3/css/font-awesome.css">
+    <title>
+        
+        PostgreSQL中HStore，JSON，JSONB｜luli&#39;s blog
+        
+    </title>
+
+    <link rel="canonical" href="http://tamlover.github.io/blog/2018/09/15/2018-9-15-HStore-JSON-JSONB-IN-PosrgreSQL/">
+
+    <!-- Bootstrap Core CSS -->
+    <link rel="stylesheet" href="/blog/css/bootstrap.min.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/blog/css/blog-style.css">
+
+    <!-- Pygments Github CSS -->
+    <link rel="stylesheet" href="/blog/css/syntax.css">
+</head>
+
+<style>
+
+    header.intro-header {
+        background-image: url('/image/tree.jpg')
+    }
+</style>
+<!-- hack iOS CSS :active style -->
+<body ontouchstart="" class="animated fadeIn">
+<!-- Navigation -->
+<nav class="navbar navbar-default navbar-custom navbar-fixed-top " id="nav-top" data-ispost = "true" data-istags="false
+" data-ishome = "false" >
+    <div class="container-fluid">
+        <!-- Brand and toggle get grouped for better mobile display -->
+        <div class="navbar-header page-scroll">
+            <button type="button" class="navbar-toggle">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand animated pulse" href="/blog/">
+                <span class="brand-logo">
+                    luli
+                </span>
+                's Blog
+            </a>
+        </div>
+
+        <!-- Collect the nav links, forms, and other content for toggling -->
+        <!-- Known Issue, found by Hux:
+            <nav>'s height woule be hold on by its content.
+            so, when navbar scale out, the <nav> will cover tags.
+            also mask any touch event of tags, unfortunately.
+        -->
+        <!-- /.navbar-collapse -->
+        <div id="huxblog_navbar">
+            <div class="navbar-collapse">
+                <ul class="nav navbar-nav navbar-right">
+                    <li>
+                        <a href="/blog/">Home</a>
+                    </li>
+					
+                    
+					
+					
+                </ul>
+            </div>
+        </div>
+    </div>
+    <!-- /.container -->
+</nav>
+<script>
+    // Drop Bootstarp low-performance Navbar
+    // Use customize navbar with high-quality material design animation
+    // in high-perf jank-free CSS3 implementation
+//    var $body   = document.body;
+    var $toggle = document.querySelector('.navbar-toggle');
+    var $navbar = document.querySelector('#huxblog_navbar');
+    var $collapse = document.querySelector('.navbar-collapse');
+
+    $toggle.addEventListener('click', handleMagic)
+    function handleMagic(e){
+        if ($navbar.className.indexOf('in') > 0) {
+        // CLOSE
+            $navbar.className = " ";
+            // wait until animation end.
+            setTimeout(function(){
+                // prevent frequently toggle
+                if($navbar.className.indexOf('in') < 0) {
+                    $collapse.style.height = "0px"
+                }
+            },400)
+        }else{
+        // OPEN
+            $collapse.style.height = "auto"
+            $navbar.className += " in";
+        }
+    }
+</script>
+
+<!-- Main Content -->
+
+<!--only post-->
+
+
+<img class="wechat-title-img"
+     src="/image/tree.jpg">
+
+
+<style>
+    
+    header.intro-header {
+        background-image: url('/image/tree.jpg')
+    }
+
+    
+</style>
+
+<header class="intro-header">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1 text-center">
+                <div class="post-heading">
+                    <h1>PostgreSQL中HStore，JSON，JSONB</h1>
+                    
+                    <span class="meta">
+                         作者 luli Ma
+                        <span>
+                          日期 2018-09-15
+                         </span>
+                    </span>
+                    <div class="tags text-center">
+                        
+                        <a class="tag" href="/blog/tags/#PostgreSQL"
+                           title="PostgreSQL">PostgreSQL</a>
+                        
+                        <a class="tag" href="/blog/tags/#HStore"
+                           title="HStore">HStore</a>
+                        
+                        <a class="tag" href="/blog/tags/#JSON"
+                           title="JSON">JSON</a>
+                        
+                        <a class="tag" href="/blog/tags/#JSONB"
+                           title="JSONB">JSONB</a>
+                        
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="post-title-haojen">
+        <span>
+            PostgreSQL中HStore，JSON，JSONB
+        </span>
+    </div>
+</header>
+
+<!-- Post Content -->
+<article>
+    <div class="container">
+        <div class="row">
+            <!-- Post Container -->
+            <div class="col-lg-8 col-lg-offset-1 col-sm-9 post-container">
+                <p>在Postgresql数据库中，添加了几种字段类型来满足在sql中使用类似与NoSql的键值对进行存取。</p>
+<h1 id="HStore"><a href="#HStore" class="headerlink" title="HStore"></a><a href="https://www.postgresql.org/docs/9.3/static/hstore.html" target="_blank" rel="noopener">HStore</a></h1><p>Hstore是按<strong>键值对</strong>的形式直接存储在数据库中。</p>
+<p>它的优点是不需要提前定义键，直接插入要保存的内容即可，且可以在键上加索引，缺点是不支持嵌套对象存储。</p>
+<p>例子：</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> hstore_test (</span><br><span class="line">  <span class="keyword">id</span> <span class="built_in">serial</span> PRIMARY <span class="keyword">KEY</span>,</span><br><span class="line">  <span class="keyword">attributes</span> hstore</span><br><span class="line">);</span><br></pre></td></tr></table></figure>
+
+<p>可以将任何内容的键值对插入到<code>attributes</code>列中</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> hstore_test (<span class="keyword">attributes</span>) <span class="keyword">VALUES</span> (</span><br><span class="line"> <span class="string">'author    =&gt; "luli",</span></span><br><span class="line"><span class="string">  date  =&gt; "2018"'</span></span><br><span class="line">);</span><br></pre></td></tr></table></figure>
+
+<p>然后可以根据不同的键或值进行查询</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">select</span> <span class="keyword">attributes</span>-&gt;<span class="string">'author'</span> <span class="keyword">as</span> author </span><br><span class="line"><span class="keyword">from</span> hstore_test </span><br><span class="line"><span class="keyword">where</span> <span class="keyword">attributes</span>-&gt;<span class="string">'date'</span> = <span class="string">'2018'</span>;</span><br></pre></td></tr></table></figure>
+
+<p>这里明显可以看出hstore足够的灵活性，特别是再加上postgrel独有的GIN，GIST索引。</p>
+<h1 id="JSON"><a href="#JSON" class="headerlink" title="JSON"></a><a href="https://www.postgresql.org/docs/9.6/static/datatype-json.html" target="_blank" rel="noopener">JSON</a></h1><p>JSON是直接的<strong>文本存储</strong>，所以可以嵌套对象，但是<strong>不可以使用索引</strong>。</p>
+<p>JSON中可以存储有效的<a href="http://json.org/" target="_blank" rel="noopener">JSON</a>值，例如<code>null, true, [1,false,&quot;string&quot;,{&quot;foo&quot;:&quot;bar&quot;}], {&quot;foo&quot;:&quot;bar&quot;,&quot;baz&quot;:[null]}</code>这些都可以存入json中。</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">SELECT</span> <span class="string">'&#123;"foo": [true, "bar"], "tags": &#123;"a": 1, "b": null&#125;&#125;'</span>::<span class="keyword">json</span>;</span><br></pre></td></tr></table></figure>
+
+<p>下面是对JSON格式操作的一些例子：</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="comment">--获取JSON对象</span></span><br><span class="line"><span class="keyword">select</span> <span class="string">'&#123;"a": &#123;"b":"foo"&#125;&#125;'</span>::<span class="keyword">json</span>-&gt;<span class="string">'a'</span>;</span><br><span class="line"></span><br><span class="line"><span class="comment">--获取JSON对象的文本（as text）</span></span><br><span class="line"><span class="keyword">select</span> <span class="string">'&#123;"a":1,"b":2&#125;'</span>::<span class="keyword">json</span>-&gt;&gt;<span class="string">'b'</span>；</span><br><span class="line"></span><br><span class="line"><span class="comment">--根据路径获取JSON对象</span></span><br><span class="line"><span class="keyword">select</span> <span class="string">'&#123;"a": &#123;"b":&#123;"c": "foo"&#125;&#125;&#125;'</span>::<span class="keyword">json</span><span class="comment">#&gt;'&#123;a,b&#125;'；</span></span><br><span class="line"></span><br><span class="line"><span class="comment">--根据路径获取JSON对象的文本</span></span><br><span class="line"><span class="keyword">select</span> <span class="string">'&#123;"a":[1,2,3],"b":[4,5,6]&#125;'</span>::<span class="keyword">json</span><span class="comment">#&gt;&gt;'&#123;a,2&#125;';</span></span><br></pre></td></tr></table></figure>
+
+<p>再补充一个实际中的例子：</p>
+<figure class="highlight sql"><table><tr><td class="code"><pre><span class="line"><span class="keyword">CREATE</span> <span class="keyword">TABLE</span> json_test (</span><br><span class="line">  <span class="keyword">id</span> <span class="built_in">serial</span> PRIMARY <span class="keyword">KEY</span>,</span><br><span class="line">  <span class="keyword">attributes</span> <span class="keyword">json</span></span><br><span class="line">);</span><br><span class="line"></span><br><span class="line"><span class="keyword">INSERT</span> <span class="keyword">INTO</span> json_test (<span class="keyword">attributes</span>) </span><br><span class="line"><span class="keyword">VALUES</span> ( <span class="string">'&#123;</span></span><br><span class="line"><span class="string">    "hello": "hello-value",</span></span><br><span class="line"><span class="string">    "world": &#123;</span></span><br><span class="line"><span class="string">        "world_type": "earth",</span></span><br><span class="line"><span class="string">        "world_value": "world"</span></span><br><span class="line"><span class="string">    &#125;</span></span><br><span class="line"><span class="string">&#125;'</span>);</span><br><span class="line"></span><br><span class="line"><span class="comment">--这里的俩条查询语句我之所以用 #&gt;&gt;这个操作符，因为等号右边是文本</span></span><br><span class="line"><span class="keyword">select</span> * <span class="keyword">from</span> json_test</span><br><span class="line"><span class="keyword">where</span> <span class="keyword">attributes</span> <span class="comment">#&gt;&gt; '&#123;hello&#125;' = 'hello-value';</span></span><br><span class="line"></span><br><span class="line"><span class="keyword">select</span> * <span class="keyword">from</span> json_test </span><br><span class="line"><span class="keyword">where</span> <span class="keyword">attributes</span> <span class="comment">#&gt;&gt; '&#123;world,world_type&#125;' = 'earth';</span></span><br></pre></td></tr></table></figure>
+
+<p>除了上述的-&gt;，-&gt;&gt;， #&gt;， #&gt;&gt;这些操作符外，还有很多操作符以及函数，可以说是相当丰富了。详细信息请移步<a href="https://www.postgresql.org/docs/current/static/functions-json.html" target="_blank" rel="noopener">官网JSON函数和操作符</a>，这里就不再赘述。</p>
+<h1 id="JSONB"><a href="#JSONB" class="headerlink" title="JSONB"></a><a href="https://www.postgresql.org/docs/9.6/static/datatype-json.html" target="_blank" rel="noopener">JSONB</a></h1><p>站在用户的角度来说JSONB和JSON的操作方式几乎相同，都接受相同值作为输入。它们二者之间主要的区别是效率。</p>
+<p>首先，JSON 数据类型存储输入文本的精确拷贝，处理函数必须在每个执行上重新解析，而JSONB数据以分解的二进制格式存储，这使得它由于添加了转换机制而在输入上稍微慢些，但是在处理上明显更快，因为不需要重新解析。（JSONB格式要比JSON格式多占用空间)</p>
+<p>其次，JSONB支持索引，这亦是一个明显的优势。</p>
+<h1 id="结论"><a href="#结论" class="headerlink" title="结论"></a>结论</h1><p>那么在面对这三种格式该如何选择呢？</p>
+<ol>
+<li><p>如果你的需求是<strong>键值对存取(无对象嵌套)</strong>，并有<strong>大量操作</strong>，且需要<strong>建立索引</strong>，那么就选择HStore。</p>
+</li>
+<li><p>如果你的需求只是<strong>文本存取</strong>，并<strong>无</strong>大量操作，那么就选择JSON，JSON存储速度快。</p>
+</li>
+<li><p>如果你的需求是<strong>文本存取</strong>，且有<strong>大量操作</strong>，并<strong>需要建立索引</strong>，那么就选择JSONB。</p>
+</li>
+</ol>
+
+                <hr>
+                
+
+                <ul class="pager">
+                    
+                    <li class="previous">
+                        <a href="/blog/2018/09/17/2018-9-17-UserType-JSONB/" data-toggle="tooltip" data-placement="top"
+                           title="自定义数据类型UserType映射到表中的JSONB">&larr; Previous Post</a>
+                    </li>
+                    
+                    
+                    <li class="next">
+                        <a href="/blog/2018/09/12/2018-9-12-upload-and-download-files-using-Java/" data-toggle="tooltip" data-placement="top"
+                           title="Java简单实现文件的上传下载">Next Post &rarr;</a>
+                    </li>
+                    
+                </ul>
+
+                
+
+                
+
+
+                <!--加入新的评论系统-->
+                
+
+                
+
+            </div>
+
+            <div class="hidden-xs col-sm-3 toc-col">
+                <div class="toc-wrap">
+                    <ol class="toc"><li class="toc-item toc-level-1"><a class="toc-link" href="#HStore"><span class="toc-text">HStore</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#JSON"><span class="toc-text">JSON</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#JSONB"><span class="toc-text">JSONB</span></a></li><li class="toc-item toc-level-1"><a class="toc-link" href="#结论"><span class="toc-text">结论</span></a></li></ol>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Sidebar Container -->
+
+            <div class="
+                col-lg-8 col-lg-offset-2
+                col-md-10 col-md-offset-1
+                sidebar-container">
+
+                <!-- Featured Tags -->
+                
+                <section>
+                    <!-- no hr -->
+                    <h5 class="text-center">
+                        <a href="/blog/tags/">FEATURED TAGS</a>
+                    </h5>
+                    <div class="tags">
+                        
+                        <a class="tag" href="/blog/tags/#PostgreSQL"
+                           title="PostgreSQL">PostgreSQL</a>
+                        
+                        <a class="tag" href="/blog/tags/#HStore"
+                           title="HStore">HStore</a>
+                        
+                        <a class="tag" href="/blog/tags/#JSON"
+                           title="JSON">JSON</a>
+                        
+                        <a class="tag" href="/blog/tags/#JSONB"
+                           title="JSONB">JSONB</a>
+                        
+                    </div>
+                </section>
+                
+
+                <!-- Friends Blog -->
+                
+            </div>
+        </div>
+
+    </div>
+</article>
+
+
+
+
+
+
+
+<!-- Footer -->
+<!-- Footer -->
+<footer>
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1 text-center">
+                <br>
+                <ul class="list-inline text-center">
+                
+                
+                    <li>
+                        <a target="_blank" href="https://twitter.com/ehazon">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x"></i>
+                                <i class="fa fa-twitter fa-stack-1x fa-inverse"></i>
+                            </span>
+                        </a>
+                    </li>
+                
+                
+                    <li>
+                        <a target="_blank" href="https://www.zhihu.com/people/megahertz">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x"></i>
+                                <i class="fa  fa-stack-1x fa-inverse">知</i>
+                            </span>
+                        </a>
+                    </li>
+                
+
+                
+                    <li>
+                        <a target="_blank" href="http://weibo.com/haojen">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x"></i>
+                                <i class="fa fa-weibo fa-stack-1x fa-inverse"></i>
+                            </span>
+                        </a>
+                    </li>
+                
+
+                
+
+                
+                    <li>
+                        <a target="_blank"  href="https://github.com/haojen">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x"></i>
+                                <i class="fa fa-github fa-stack-1x fa-inverse"></i>
+                            </span>
+                        </a>
+                    </li>
+                
+
+                
+
+                </ul>
+                <p class="copyright text-muted">
+                    Copyright &copy; luli 2019
+                    <br>
+                    <span id="busuanzi_container_site_pv" style="font-size: 12px;">PV: <span id="busuanzi_value_site_pv"></span> Times</span>
+                    <br>
+                    Theme by <a href="https://haojen.github.io/">Haojen Ma</a>
+                </p>
+
+            </div>
+        </div>
+    </div>
+</footer>
+
+<!-- jQuery -->
+<script src="/blog/js/jquery.min.js"></script>
+
+<!-- Bootstrap Core JavaScript -->
+<script src="/blog/js/bootstrap.min.js"></script>
+
+<!-- Custom Theme JavaScript -->
+<script src="/blog/js/blog.js"></script>
+
+<!-- async load function -->
+<script>
+    function async(u, c) {
+      var d = document, t = 'script',
+          o = d.createElement(t),
+          s = d.getElementsByTagName(t)[0];
+      o.src = u;
+      if (c) { o.addEventListener('load', function (e) { c(null, e); }, false); }
+      s.parentNode.insertBefore(o, s);
+    }
+</script>
+
+<!-- jquery.tagcloud.js -->
+<script>
+    // only load tagcloud.js in tag.html
+    if($('#tag_cloud').length !== 0){
+        async("http://tamlover.github.io/blog/js/jquery.tagcloud.js",function(){
+            $.fn.tagcloud.defaults = {
+                //size: {start: 1, end: 1, unit: 'em'},
+                color: {start: '#bbbbee', end: '#0085a1'},
+            };
+            $('#tag_cloud a').tagcloud();
+        })
+    }
+</script>
+
+<!--fastClick.js -->
+<script>
+    async("//cdn.bootcss.com/fastclick/1.0.6/fastclick.min.js", function(){
+        var $nav = document.querySelector("nav");
+        if($nav) FastClick.attach($nav);
+    })
+</script>
+
+
+
+<!-- Google Analytics -->
+
+
+
+<!-- Baidu Tongji -->
+
+
+<!-- swiftype -->
+<script type="text/javascript">
+  (function(w,d,t,u,n,s,e){w['SwiftypeObject']=n;w[n]=w[n]||function(){
+  (w[n].q=w[n].q||[]).push(arguments);};s=d.createElement(t);
+  e=d.getElementsByTagName(t)[0];s.async=1;s.src=u;e.parentNode.insertBefore(s,e);
+  })(window,document,'script','//s.swiftypecdn.com/install/v2/st.js','_st');
+
+  _st('install','','2.0.0');
+</script>
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+<!--wechat title img-->
+<img class="wechat-title-img" src="">
+</body>
+
+</html>

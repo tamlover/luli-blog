@@ -1,0 +1,428 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<!-- Head tag -->
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="陆离的博客">
+    <meta name="keyword" content>
+    <meta name="theme-color" content="#600090">
+    <meta name="msapplication-navbutton-color" content="#600090">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="#600090">
+    <link rel="shortcut icon" href="https://cdn4.iconfinder.com/data/icons/ionicons/512/icon-person-128.png">
+    <link rel="alternate" type="application/atom+xml" title="luli" href="/atom.xml">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/animate.css/3.5.2/animate.min.css">
+    <link rel="stylesheet" href="//cdn.bootcss.com/font-awesome/4.6.3/css/font-awesome.css">
+    <title>
+        
+        Quartz简单入门（二）｜luli&#39;s blog
+        
+    </title>
+
+    <link rel="canonical" href="http://tamlover.github.io/blog/2018/10/23/2018-10-23-simple-Quartz-second/">
+
+    <!-- Bootstrap Core CSS -->
+    <link rel="stylesheet" href="/blog/css/bootstrap.min.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/blog/css/blog-style.css">
+
+    <!-- Pygments Github CSS -->
+    <link rel="stylesheet" href="/blog/css/syntax.css">
+</head>
+
+<style>
+
+    header.intro-header {
+        background-image: url('/image/tree.jpg')
+    }
+</style>
+<!-- hack iOS CSS :active style -->
+<body ontouchstart="" class="animated fadeIn">
+<!-- Navigation -->
+<nav class="navbar navbar-default navbar-custom navbar-fixed-top " id="nav-top" data-ispost = "true" data-istags="false
+" data-ishome = "false" >
+    <div class="container-fluid">
+        <!-- Brand and toggle get grouped for better mobile display -->
+        <div class="navbar-header page-scroll">
+            <button type="button" class="navbar-toggle">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand animated pulse" href="/blog/">
+                <span class="brand-logo">
+                    luli
+                </span>
+                's Blog
+            </a>
+        </div>
+
+        <!-- Collect the nav links, forms, and other content for toggling -->
+        <!-- Known Issue, found by Hux:
+            <nav>'s height woule be hold on by its content.
+            so, when navbar scale out, the <nav> will cover tags.
+            also mask any touch event of tags, unfortunately.
+        -->
+        <!-- /.navbar-collapse -->
+        <div id="huxblog_navbar">
+            <div class="navbar-collapse">
+                <ul class="nav navbar-nav navbar-right">
+                    <li>
+                        <a href="/blog/">Home</a>
+                    </li>
+					
+                    
+					
+					
+                </ul>
+            </div>
+        </div>
+    </div>
+    <!-- /.container -->
+</nav>
+<script>
+    // Drop Bootstarp low-performance Navbar
+    // Use customize navbar with high-quality material design animation
+    // in high-perf jank-free CSS3 implementation
+//    var $body   = document.body;
+    var $toggle = document.querySelector('.navbar-toggle');
+    var $navbar = document.querySelector('#huxblog_navbar');
+    var $collapse = document.querySelector('.navbar-collapse');
+
+    $toggle.addEventListener('click', handleMagic)
+    function handleMagic(e){
+        if ($navbar.className.indexOf('in') > 0) {
+        // CLOSE
+            $navbar.className = " ";
+            // wait until animation end.
+            setTimeout(function(){
+                // prevent frequently toggle
+                if($navbar.className.indexOf('in') < 0) {
+                    $collapse.style.height = "0px"
+                }
+            },400)
+        }else{
+        // OPEN
+            $collapse.style.height = "auto"
+            $navbar.className += " in";
+        }
+    }
+</script>
+
+<!-- Main Content -->
+
+<!--only post-->
+
+
+<img class="wechat-title-img"
+     src="/image/tree.jpg">
+
+
+<style>
+    
+    header.intro-header {
+        background-image: url('/image/tree.jpg')
+    }
+
+    
+</style>
+
+<header class="intro-header">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1 text-center">
+                <div class="post-heading">
+                    <h1>Quartz简单入门（二）</h1>
+                    
+                    <span class="meta">
+                         作者 luli Ma
+                        <span>
+                          日期 2018-10-23
+                         </span>
+                    </span>
+                    <div class="tags text-center">
+                        
+                        <a class="tag" href="/blog/tags/#Quartz"
+                           title="Quartz">Quartz</a>
+                        
+                        <a class="tag" href="/blog/tags/#misfire"
+                           title="misfire">misfire</a>
+                        
+                        <a class="tag" href="/blog/tags/#jobDataMap"
+                           title="jobDataMap">jobDataMap</a>
+                        
+                        <a class="tag" href="/blog/tags/#persistence"
+                           title="persistence">persistence</a>
+                        
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="post-title-haojen">
+        <span>
+            Quartz简单入门（二）
+        </span>
+    </div>
+</header>
+
+<!-- Post Content -->
+<article>
+    <div class="container">
+        <div class="row">
+            <!-- Post Container -->
+            <div class="col-lg-8 col-lg-offset-1 col-sm-9 post-container">
+                <h2 id="知识点补充"><a href="#知识点补充" class="headerlink" title="知识点补充"></a>知识点补充</h2><p>上篇是仅仅是一个简单入门，只是希望做一个抛砖引玉的作用。下面我提一下几个知识点，如果有需求，可以再找找其他资料。</p>
+<p>scheduler作为一个独立的容器，它不仅仅可以开启，也可以终止，或者添加，删除任务等等功能。</p>
+<p>trigger有几种不同的类型，其中CronTrigger可以实现极为复杂的定时任务。trigger的misfire机制，可以设置不同misfire策略，告诉quartz如何如果发生misfire该如何处理。</p>
+<p>misfire策略</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">MISFIRE_INSTRUCTION_IGNORE_MISFIRE_POLICY</span><br><span class="line">MISFIRE_INSTRUCTION_FIRE_NOW</span><br><span class="line">MISFIRE_INSTRUCTION_RESCHEDULE_NOW_WITH_EXISTING_REPEAT_COUNT</span><br><span class="line">MISFIRE_INSTRUCTION_RESCHEDULE_NOW_WITH_REMAINING_REPEAT_COUNT</span><br><span class="line">MISFIRE_INSTRUCTION_RESCHEDULE_NEXT_WITH_REMAINING_COUNT</span><br><span class="line">MISFIRE_INSTRUCTION_RESCHEDULE_NEXT_WITH_EXISTING_COUNT</span><br></pre></td></tr></table></figure>
+
+<p>misfire配置</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"> </span><br><span class="line">Trigger trigger = newTrigger()</span><br><span class="line">        .withIdentity(<span class="string">"trigger"</span>, <span class="string">"group"</span>)</span><br><span class="line">        .withSchedule(simpleSchedule()</span><br><span class="line">            .withIntervalInMinutes(<span class="number">1</span>)</span><br><span class="line">            .repeatForever()</span><br><span class="line">            .withMisfireHandlingInstructionNextWithExistingCount())</span><br><span class="line">        .build();</span><br></pre></td></tr></table></figure>
+
+<p>job中使用jobdataMap注入数据</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line">JobDataMap jobDataMap = <span class="keyword">new</span> JobDataMap();</span><br><span class="line">jobDataMap.put(<span class="string">"hello"</span>, <span class="string">"world"</span>);</span><br><span class="line">jobDataMap.put(<span class="string">"love"</span>, <span class="string">"china"</span>);</span><br><span class="line"></span><br><span class="line">JobDetail jobDetail = newJob(MyJob.class)</span><br><span class="line">        .usingJobData(jobDataMap)</span><br><span class="line">        .build();</span><br></pre></td></tr></table></figure>
+
+<p>数据注入job，job如何拿出来呢</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">execute</span><span class="params">(JobExecutionContext context)</span><span class="keyword">throws</span> JobExecutionException </span>&#123;</span><br><span class="line">    JobDataMap dataMap = context.getJobDetail().getJobDataMap();</span><br><span class="line">    String hello = dataMap.getString(<span class="string">"hello"</span>);</span><br><span class="line">    String = dataMap.getString(<span class="string">"love"</span>);</span><br><span class="line">    <span class="comment">//then...</span></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>该篇是接上篇的一个扩展，再讲一下如何将job和trigger持久化操作。持久化有什么好处呢，假设你是在内存中做定时任务，遇到服务宕机，机房停电，你所有的任务就丢失了，但是如果你存在数据库里，当服务再次启动的时候，Quartz的misfire机制就会启动，数据库中的trigger触发，执行job。</p>
+<h2 id="Quartz持久化"><a href="#Quartz持久化" class="headerlink" title="Quartz持久化"></a>Quartz持久化</h2><p>1、导入需要的jar包</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">//与数据库连接的包，我这边是postgresql,你是其他的导入其他的即可</span><br><span class="line">compile group:&apos;org.postgresql&apos;,name:&apos;postgresql&apos;,version:&apos;42.1.1&apos;</span><br><span class="line">//c3p0，开源的数据库连接池</span><br><span class="line">compile group: &apos;com.mchange&apos;, name: &apos;c3p0&apos;, version: &apos;0.9.5.2&apos;</span><br></pre></td></tr></table></figure>
+
+<p>2、建表</p>
+<p><a href="http://www.quartz-scheduler.org/downloads/" target="_blank" rel="noopener">下载</a>官方的包，解压一下，在里面你可以找到对应数据库的建表代码。然后执行sql语句将表建到数据库中。</p>
+<p>3、修改配置(quartz.propeties)</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">org.quartz.scheduler.instanceName = MyScheduler</span><br><span class="line">org.quartz.threadPool.threadCount = 3</span><br><span class="line">org.quartz.threadPool.class=org.quartz.simpl.SimpleThreadPool</span><br><span class="line"></span><br><span class="line">//修改jobsclass,为jobStoreTx,上一篇为RAM，默认也是RAM</span><br><span class="line">org.quartz.jobStore.class = org.quartz.impl.jdbcjobstore.JobStoreTX</span><br><span class="line">//委托类，执行sql使用</span><br><span class="line">org.quartz.jobStore.driverDelegateClass=org.quartz.impl.jdbcjobstore.PostgreSQLDelegate</span><br><span class="line">//数据库表的前缀</span><br><span class="line">org.quartz.jobStore.tablePrefix = QRTZ_</span><br><span class="line">//数据源配置</span><br><span class="line">org.quartz.jobStore.dataSource = myDS</span><br><span class="line">org.quartz.dataSource.myDS.driver = org.postgresql.Driver</span><br><span class="line">org.quartz.dataSource.myDS.URL = jdbc:postgresql://localhost/testdb</span><br><span class="line">org.quartz.dataSource.myDS.user = postgres</span><br><span class="line">org.quartz.dataSource.myDS.password = postgres</span><br></pre></td></tr></table></figure>
+
+<p>然后你再运行上一篇中例子，执行的过程中，你会在数据库中trigger,jobdetail等表中会看到记录，job执行完后记录也被删除，这就成功了。</p>
+
+                <hr>
+                
+
+                <ul class="pager">
+                    
+                    <li class="previous">
+                        <a href="/blog/2019/09/17/2019-9-17-java-lock(1)/" data-toggle="tooltip" data-placement="top"
+                           title="深入理解Java锁(上)">&larr; Previous Post</a>
+                    </li>
+                    
+                    
+                    <li class="next">
+                        <a href="/blog/2018/10/23/2018-10-23-simple-Quartz-third/" data-toggle="tooltip" data-placement="top"
+                           title="Quartz简单入门（三）">Next Post &rarr;</a>
+                    </li>
+                    
+                </ul>
+
+                
+
+                
+
+
+                <!--加入新的评论系统-->
+                
+
+                
+
+            </div>
+
+            <div class="hidden-xs col-sm-3 toc-col">
+                <div class="toc-wrap">
+                    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#知识点补充"><span class="toc-text">知识点补充</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#Quartz持久化"><span class="toc-text">Quartz持久化</span></a></li></ol>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Sidebar Container -->
+
+            <div class="
+                col-lg-8 col-lg-offset-2
+                col-md-10 col-md-offset-1
+                sidebar-container">
+
+                <!-- Featured Tags -->
+                
+                <section>
+                    <!-- no hr -->
+                    <h5 class="text-center">
+                        <a href="/blog/tags/">FEATURED TAGS</a>
+                    </h5>
+                    <div class="tags">
+                        
+                        <a class="tag" href="/blog/tags/#Quartz"
+                           title="Quartz">Quartz</a>
+                        
+                        <a class="tag" href="/blog/tags/#misfire"
+                           title="misfire">misfire</a>
+                        
+                        <a class="tag" href="/blog/tags/#jobDataMap"
+                           title="jobDataMap">jobDataMap</a>
+                        
+                        <a class="tag" href="/blog/tags/#persistence"
+                           title="persistence">persistence</a>
+                        
+                    </div>
+                </section>
+                
+
+                <!-- Friends Blog -->
+                
+            </div>
+        </div>
+
+    </div>
+</article>
+
+
+
+
+
+
+
+<!-- Footer -->
+<!-- Footer -->
+<footer>
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1 text-center">
+                <br>
+                <ul class="list-inline text-center">
+                
+                
+                    <li>
+                        <a target="_blank" href="https://twitter.com/ehazon">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x"></i>
+                                <i class="fa fa-twitter fa-stack-1x fa-inverse"></i>
+                            </span>
+                        </a>
+                    </li>
+                
+                
+                    <li>
+                        <a target="_blank" href="https://www.zhihu.com/people/megahertz">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x"></i>
+                                <i class="fa  fa-stack-1x fa-inverse">知</i>
+                            </span>
+                        </a>
+                    </li>
+                
+
+                
+                    <li>
+                        <a target="_blank" href="http://weibo.com/haojen">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x"></i>
+                                <i class="fa fa-weibo fa-stack-1x fa-inverse"></i>
+                            </span>
+                        </a>
+                    </li>
+                
+
+                
+
+                
+                    <li>
+                        <a target="_blank"  href="https://github.com/haojen">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x"></i>
+                                <i class="fa fa-github fa-stack-1x fa-inverse"></i>
+                            </span>
+                        </a>
+                    </li>
+                
+
+                
+
+                </ul>
+                <p class="copyright text-muted">
+                    Copyright &copy; luli 2019
+                    <br>
+                    <span id="busuanzi_container_site_pv" style="font-size: 12px;">PV: <span id="busuanzi_value_site_pv"></span> Times</span>
+                    <br>
+                    Theme by <a href="https://haojen.github.io/">Haojen Ma</a>
+                </p>
+
+            </div>
+        </div>
+    </div>
+</footer>
+
+<!-- jQuery -->
+<script src="/blog/js/jquery.min.js"></script>
+
+<!-- Bootstrap Core JavaScript -->
+<script src="/blog/js/bootstrap.min.js"></script>
+
+<!-- Custom Theme JavaScript -->
+<script src="/blog/js/blog.js"></script>
+
+<!-- async load function -->
+<script>
+    function async(u, c) {
+      var d = document, t = 'script',
+          o = d.createElement(t),
+          s = d.getElementsByTagName(t)[0];
+      o.src = u;
+      if (c) { o.addEventListener('load', function (e) { c(null, e); }, false); }
+      s.parentNode.insertBefore(o, s);
+    }
+</script>
+
+<!-- jquery.tagcloud.js -->
+<script>
+    // only load tagcloud.js in tag.html
+    if($('#tag_cloud').length !== 0){
+        async("http://tamlover.github.io/blog/js/jquery.tagcloud.js",function(){
+            $.fn.tagcloud.defaults = {
+                //size: {start: 1, end: 1, unit: 'em'},
+                color: {start: '#bbbbee', end: '#0085a1'},
+            };
+            $('#tag_cloud a').tagcloud();
+        })
+    }
+</script>
+
+<!--fastClick.js -->
+<script>
+    async("//cdn.bootcss.com/fastclick/1.0.6/fastclick.min.js", function(){
+        var $nav = document.querySelector("nav");
+        if($nav) FastClick.attach($nav);
+    })
+</script>
+
+
+
+<!-- Google Analytics -->
+
+
+
+<!-- Baidu Tongji -->
+
+
+<!-- swiftype -->
+<script type="text/javascript">
+  (function(w,d,t,u,n,s,e){w['SwiftypeObject']=n;w[n]=w[n]||function(){
+  (w[n].q=w[n].q||[]).push(arguments);};s=d.createElement(t);
+  e=d.getElementsByTagName(t)[0];s.async=1;s.src=u;e.parentNode.insertBefore(s,e);
+  })(window,document,'script','//s.swiftypecdn.com/install/v2/st.js','_st');
+
+  _st('install','','2.0.0');
+</script>
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+<!--wechat title img-->
+<img class="wechat-title-img" src="">
+</body>
+
+</html>

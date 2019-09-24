@@ -1,0 +1,458 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<!-- Head tag -->
+<head><meta name="generator" content="Hexo 3.9.0">
+    <meta charset="utf-8">
+    <meta http-equiv="X-UA-Compatible" content="IE=edge">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta name="description" content="陆离的博客">
+    <meta name="keyword" content>
+    <meta name="theme-color" content="#600090">
+    <meta name="msapplication-navbutton-color" content="#600090">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="#600090">
+    <link rel="shortcut icon" href="https://cdn4.iconfinder.com/data/icons/ionicons/512/icon-person-128.png">
+    <link rel="alternate" type="application/atom+xml" title="luli" href="/atom.xml">
+    <link rel="stylesheet" href="//cdnjs.cloudflare.com/ajax/libs/animate.css/3.5.2/animate.min.css">
+    <link rel="stylesheet" href="//cdn.bootcss.com/font-awesome/4.6.3/css/font-awesome.css">
+    <title>
+        
+        Quartz简单入门（一）｜luli&#39;s blog
+        
+    </title>
+
+    <link rel="canonical" href="http://tamlover.github.io/blog/2018/10/22/2018-10-22-simple-Quartz-first/">
+
+    <!-- Bootstrap Core CSS -->
+    <link rel="stylesheet" href="/blog/css/bootstrap.min.css">
+
+    <!-- Custom CSS -->
+    <link rel="stylesheet" href="/blog/css/blog-style.css">
+
+    <!-- Pygments Github CSS -->
+    <link rel="stylesheet" href="/blog/css/syntax.css">
+</head>
+
+<style>
+
+    header.intro-header {
+        background-image: url('/image/tree.jpg')
+    }
+</style>
+<!-- hack iOS CSS :active style -->
+<body ontouchstart="" class="animated fadeIn">
+<!-- Navigation -->
+<nav class="navbar navbar-default navbar-custom navbar-fixed-top " id="nav-top" data-ispost = "true" data-istags="false
+" data-ishome = "false" >
+    <div class="container-fluid">
+        <!-- Brand and toggle get grouped for better mobile display -->
+        <div class="navbar-header page-scroll">
+            <button type="button" class="navbar-toggle">
+                <span class="sr-only">Toggle navigation</span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+                <span class="icon-bar"></span>
+            </button>
+            <a class="navbar-brand animated pulse" href="/blog/">
+                <span class="brand-logo">
+                    luli
+                </span>
+                's Blog
+            </a>
+        </div>
+
+        <!-- Collect the nav links, forms, and other content for toggling -->
+        <!-- Known Issue, found by Hux:
+            <nav>'s height woule be hold on by its content.
+            so, when navbar scale out, the <nav> will cover tags.
+            also mask any touch event of tags, unfortunately.
+        -->
+        <!-- /.navbar-collapse -->
+        <div id="huxblog_navbar">
+            <div class="navbar-collapse">
+                <ul class="nav navbar-nav navbar-right">
+                    <li>
+                        <a href="/blog/">Home</a>
+                    </li>
+					
+                    
+					
+					
+                </ul>
+            </div>
+        </div>
+    </div>
+    <!-- /.container -->
+</nav>
+<script>
+    // Drop Bootstarp low-performance Navbar
+    // Use customize navbar with high-quality material design animation
+    // in high-perf jank-free CSS3 implementation
+//    var $body   = document.body;
+    var $toggle = document.querySelector('.navbar-toggle');
+    var $navbar = document.querySelector('#huxblog_navbar');
+    var $collapse = document.querySelector('.navbar-collapse');
+
+    $toggle.addEventListener('click', handleMagic)
+    function handleMagic(e){
+        if ($navbar.className.indexOf('in') > 0) {
+        // CLOSE
+            $navbar.className = " ";
+            // wait until animation end.
+            setTimeout(function(){
+                // prevent frequently toggle
+                if($navbar.className.indexOf('in') < 0) {
+                    $collapse.style.height = "0px"
+                }
+            },400)
+        }else{
+        // OPEN
+            $collapse.style.height = "auto"
+            $navbar.className += " in";
+        }
+    }
+</script>
+
+<!-- Main Content -->
+
+<!--only post-->
+
+
+<img class="wechat-title-img"
+     src="/image/tree.jpg">
+
+
+<style>
+    
+    header.intro-header {
+        background-image: url('/image/tree.jpg')
+    }
+
+    
+</style>
+
+<header class="intro-header">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1 text-center">
+                <div class="post-heading">
+                    <h1>Quartz简单入门（一）</h1>
+                    
+                    <span class="meta">
+                         作者 luli Ma
+                        <span>
+                          日期 2018-10-22
+                         </span>
+                    </span>
+                    <div class="tags text-center">
+                        
+                        <a class="tag" href="/blog/tags/#Quartz"
+                           title="Quartz">Quartz</a>
+                        
+                        <a class="tag" href="/blog/tags/#schedule"
+                           title="schedule">schedule</a>
+                        
+                        <a class="tag" href="/blog/tags/#trigger"
+                           title="trigger">trigger</a>
+                        
+                        <a class="tag" href="/blog/tags/#job"
+                           title="job">job</a>
+                        
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    <div class="post-title-haojen">
+        <span>
+            Quartz简单入门（一）
+        </span>
+    </div>
+</header>
+
+<!-- Post Content -->
+<article>
+    <div class="container">
+        <div class="row">
+            <!-- Post Container -->
+            <div class="col-lg-8 col-lg-offset-1 col-sm-9 post-container">
+                <h2 id="Quartz是什么？能干什么？"><a href="#Quartz是什么？能干什么？" class="headerlink" title="Quartz是什么？能干什么？"></a>Quartz是什么？能干什么？</h2><p>​    Quartz是一个完全使用Java开发，开源的任务调度框架。它的核心功能是定时、定期的执行任务，比如x年x月的每个星期五上午8点到9点，每隔10分钟执行一次任务。它有3个核心要素：调度器(Scheduler)、任务(Job)、触发器(Trigger)。它能够承载成千上万的任务调度，并且支持集群。它支持将数据存储到数据库中以实现持久化，并支持绝大多数的数据库。它将任务与触发设计为松耦合，即一个任务可以对应多个触发器，这样能够轻松构造出极为复杂的触发策略</p>
+<h2 id="先跑起来"><a href="#先跑起来" class="headerlink" title="先跑起来"></a>先跑起来</h2><p>1、导入Quratz Jar包（你可以在官网下载，可以用mvn库里导入）</p>
+<p>​    我用的是Gradle导入：</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">compile group: &apos;org.quartz-scheduler&apos;, name: &apos;quartz&apos;, version: &apos;2.3.0&apos;</span><br></pre></td></tr></table></figure>
+
+<p>2、添加quartz.properties配置文件</p>
+<p>​    配置里面可以配置很多东西，所以quartz可以很灵活的使用，这里先配置几个需要的</p>
+<figure class="highlight plain"><table><tr><td class="code"><pre><span class="line">org.quartz.scheduler.instanceName = MyScheduler</span><br><span class="line">org.quartz.threadPool.threadCount = 3</span><br><span class="line">org.quartz.jobStore.class = org.quartz.simpl.RAMJobStore</span><br></pre></td></tr></table></figure>
+
+<p>3、示例程序</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">package</span> com.example.quartzdemo;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.quartz.JobDetail;</span><br><span class="line"><span class="keyword">import</span> org.quartz.Scheduler;</span><br><span class="line"><span class="keyword">import</span> org.quartz.SchedulerException;</span><br><span class="line"><span class="keyword">import</span> org.quartz.Trigger;</span><br><span class="line"><span class="keyword">import</span> org.quartz.impl.StdSchedulerFactory;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> <span class="keyword">static</span> org.quartz.JobBuilder.newJob;</span><br><span class="line"><span class="keyword">import</span> <span class="keyword">static</span> org.quartz.SimpleScheduleBuilder.simpleSchedule;</span><br><span class="line"><span class="keyword">import</span> <span class="keyword">static</span> org.quartz.TriggerBuilder.newTrigger;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@author</span> li.lu</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@date</span> 2018/10/23 17:01</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">QuartzDemo</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">static</span> <span class="keyword">void</span> <span class="title">main</span><span class="params">(String[] args)</span> <span class="keyword">throws</span> SchedulerException </span>&#123;</span><br><span class="line"></span><br><span class="line">        <span class="comment">//获取调度中心的实例</span></span><br><span class="line">        Scheduler scheduler = StdSchedulerFactory.getDefaultScheduler();</span><br><span class="line"></span><br><span class="line">        <span class="comment">//start</span></span><br><span class="line">        scheduler.start();</span><br><span class="line"></span><br><span class="line">        <span class="comment">//定义job</span></span><br><span class="line">        JobDetail job = newJob(MyJob.class)</span><br><span class="line">                .withIdentity(<span class="string">"myJob"</span>, <span class="string">"myGroup"</span>)</span><br><span class="line">                .build();</span><br><span class="line"></span><br><span class="line">        <span class="comment">//定义trigger，每隔1秒执行一次，执行10次</span></span><br><span class="line">        Trigger trigger = newTrigger()</span><br><span class="line">                .withIdentity(<span class="string">"myTrigger"</span>, <span class="string">"myGroup"</span>)</span><br><span class="line">                .startNow()</span><br><span class="line">                .withSchedule(simpleSchedule()</span><br><span class="line">                        .withIntervalInSeconds(<span class="number">1</span>)</span><br><span class="line">                        .withRepeatCount(<span class="number">10</span>))</span><br><span class="line">                .build();</span><br><span class="line"></span><br><span class="line">        <span class="comment">//注册到调度中心</span></span><br><span class="line">        scheduler.scheduleJob(job, trigger);</span><br><span class="line"></span><br><span class="line">        <span class="comment">//shutdown</span></span><br><span class="line"><span class="comment">//        scheduler.shutdown();</span></span><br><span class="line"></span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">package</span> com.example.quartzdemo;</span><br><span class="line"></span><br><span class="line"><span class="keyword">import</span> org.quartz.Job;</span><br><span class="line"><span class="keyword">import</span> org.quartz.JobExecutionContext;</span><br><span class="line"><span class="keyword">import</span> org.quartz.JobExecutionException;</span><br><span class="line"></span><br><span class="line"><span class="comment">/**</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@author</span> li.lu</span></span><br><span class="line"><span class="comment"> * <span class="doctag">@date</span> 2018/10/23 17:18</span></span><br><span class="line"><span class="comment"> */</span></span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">MyJob</span> <span class="keyword">implements</span> <span class="title">Job</span> </span>&#123;</span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">execute</span><span class="params">(JobExecutionContext context)</span> <span class="keyword">throws</span> JobExecutionException </span>&#123;</span><br><span class="line">        System.out.println(<span class="string">"执行任务:"</span>+System.currentTimeMillis());</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>这个时候如果你能看到你的控制窗每隔1秒输出 “执行任务:XXXXX”，就说一个简单任务调度例子明成功了。好，现在我们来研究它是怎么跑起来的。</p>
+<h2 id="怎么跑起来的"><a href="#怎么跑起来的" class="headerlink" title="怎么跑起来的"></a>怎么跑起来的</h2><p>Quartz的主要元素是scheduler（调度器），trigger（触发器），job（任务），其中trigger和job是元数据，scheduler是任务调度的管理器。scheduler是由schedulerFactory创建，scheduler创建好后，分别将trigger和job注册进scheduler，最后scheduler负责调度任务。</p>
+<h3 id="scheduler"><a href="#scheduler" class="headerlink" title="scheduler"></a>scheduler</h3><p>scheduler是任务调度的管理器，其中有俩个重要的组件：ThreadPool（线程池），JobStore（任务存储）。</p>
+<p>ThreadPool线程池，任务都交给线程池来做。</p>
+<p>JobStore做任务存储，在Quartz中，trigger和job都需要储存下来才可以使用。</p>
+<p>Schedule有三种：</p>
+<ol>
+<li><p>StdScheduler</p>
+</li>
+<li><p>RemoteMBeanScheduler</p>
+</li>
+<li><p>RemoteScheduler</p>
+</li>
+</ol>
+<p>其中StdScheduler最常用。</p>
+<p>scheduler.start（）方法就是启动scheduler，scheduler.scheduleJob(job, trigger)将job和trigger注册进来。</p>
+<p>当我们scheduler.start（）后，在调用.shutdown()之前，scheduler会一直在跑。</p>
+<h4 id="schedulerFactory"><a href="#schedulerFactory" class="headerlink" title="schedulerFactory"></a>schedulerFactory</h4><p>schedulerFactory负责创建scheduler，有DirectSchedulerFactory或者StdSchedulerFactory俩类。前者直接构建，基于代码初始化配置，而后者基于配置文件（quartz.properties）构建。  StdSchedulerFactory使用比较多。</p>
+<h3 id="Job"><a href="#Job" class="headerlink" title="Job"></a>Job</h3><p>Job是一个接口类，这个接口只有一个方法</p>
+<figure class="highlight java"><table><tr><td class="code"><pre><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">interface</span> <span class="title">Job</span> </span>&#123;</span><br><span class="line">    <span class="function"><span class="keyword">void</span> <span class="title">execute</span><span class="params">(JobExecutionContext context)</span></span></span><br><span class="line"><span class="function">        <span class="keyword">throws</span> JobExecutionException</span>;</span><br><span class="line"></span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+
+<p>当和Job绑定的Trigger被触发时就会调用到这个execute（）方法。</p>
+<h4 id="JobDetail"><a href="#JobDetail" class="headerlink" title="JobDetail"></a>JobDetail</h4><p>jobDetail 负责实例化一个job，并且设置这个job的属性</p>
+<p>而MyJob这个类就是你要做的任务了，在上面的代码中你可以看到，我实现了Job这个接口后，重写execute（）方法，输出一串内容。</p>
+<p>这里提一个点，给Job传输数据用JobDataMap而不是构造器。</p>
+<h3 id="Trigger"><a href="#Trigger" class="headerlink" title="Trigger"></a>Trigger</h3><p>Trigger用于定义任务调度时间规则。</p>
+<h4 id="属性"><a href="#属性" class="headerlink" title="属性"></a>属性</h4><ol>
+<li><p>startTime和endTime<br>所有的Trigger都包含startTime、endTime这两个属性</p>
+</li>
+<li><p>优先级(Priority)<br>触发器的优先级值默认为5，不过注意优先级是针对同一时刻来说的，在同一时刻优先级高的先触发。假如一个触发器被执行时间为3:00，另外一个为3:01，那么肯定是先执行时间为3:00的触发器。</p>
+</li>
+<li><p>错失触发(Misfire)策略</p>
+<p>在任务调度中，并不能保证所有的触发器都会在指定时间被触发，假如Scheduler资源不足或者服务器重启的情况，就好发生错失触发的情况。</p>
+</li>
+</ol>
+<h4 id="类型"><a href="#类型" class="headerlink" title="类型"></a>类型</h4><p>在任务调度Quartz中，Trigger主要的触发器有：SimpleTrigger，CalendarIntervelTrigger DailyTimeIntervalTrigger，CronTrigger。</p>
+<p>上面的例子中用的就是SimplTrigger，一种最基本的触发器。</p>
+<p>这种DSL风是不是看起来特别清爽，希望我们以后都做这样的类初始化！</p>
+<p>其中几种trigger类型这里就不讲了，看名字也大概能猜到他们的功能吧！</p>
+<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>用一个生活中的例子来总结吧。scheduler就像一座车站，trigger比如是一张时刻表，job就是一辆要等待出发的车。将时刻表和车都放入车站中（注册），并将时刻表和车绑定。车站在轮询时刻表时，发现一辆车该出发了，就让那辆车出发（线程池去执行），它要去哪开多快车站不管（MyJob中excute()方法），车站让它出发就行（调用excute（））。</p>
+<p>这里注意一下，一张时刻表（trigger）只能绑定一辆车（job），但是一辆车（job）却可以绑定多张时刻表（trigger）。</p>
+
+                <hr>
+                
+
+                <ul class="pager">
+                    
+                    <li class="previous">
+                        <a href="/blog/2018/10/23/2018-10-23-simple-Quartz-third/" data-toggle="tooltip" data-placement="top"
+                           title="Quartz简单入门（三）">&larr; Previous Post</a>
+                    </li>
+                    
+                    
+                    <li class="next">
+                        <a href="/blog/2018/09/17/2018-9-17-UserType-JSONB/" data-toggle="tooltip" data-placement="top"
+                           title="自定义数据类型UserType映射到表中的JSONB">Next Post &rarr;</a>
+                    </li>
+                    
+                </ul>
+
+                
+
+                
+
+
+                <!--加入新的评论系统-->
+                
+
+                
+
+            </div>
+
+            <div class="hidden-xs col-sm-3 toc-col">
+                <div class="toc-wrap">
+                    <ol class="toc"><li class="toc-item toc-level-2"><a class="toc-link" href="#Quartz是什么？能干什么？"><span class="toc-text">Quartz是什么？能干什么？</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#先跑起来"><span class="toc-text">先跑起来</span></a></li><li class="toc-item toc-level-2"><a class="toc-link" href="#怎么跑起来的"><span class="toc-text">怎么跑起来的</span></a><ol class="toc-child"><li class="toc-item toc-level-3"><a class="toc-link" href="#scheduler"><span class="toc-text">scheduler</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#schedulerFactory"><span class="toc-text">schedulerFactory</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Job"><span class="toc-text">Job</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#JobDetail"><span class="toc-text">JobDetail</span></a></li></ol></li><li class="toc-item toc-level-3"><a class="toc-link" href="#Trigger"><span class="toc-text">Trigger</span></a><ol class="toc-child"><li class="toc-item toc-level-4"><a class="toc-link" href="#属性"><span class="toc-text">属性</span></a></li><li class="toc-item toc-level-4"><a class="toc-link" href="#类型"><span class="toc-text">类型</span></a></li></ol></li></ol></li><li class="toc-item toc-level-2"><a class="toc-link" href="#总结"><span class="toc-text">总结</span></a></li></ol>
+                </div>
+            </div>
+        </div>
+
+        <div class="row">
+            <!-- Sidebar Container -->
+
+            <div class="
+                col-lg-8 col-lg-offset-2
+                col-md-10 col-md-offset-1
+                sidebar-container">
+
+                <!-- Featured Tags -->
+                
+                <section>
+                    <!-- no hr -->
+                    <h5 class="text-center">
+                        <a href="/blog/tags/">FEATURED TAGS</a>
+                    </h5>
+                    <div class="tags">
+                        
+                        <a class="tag" href="/blog/tags/#Quartz"
+                           title="Quartz">Quartz</a>
+                        
+                        <a class="tag" href="/blog/tags/#schedule"
+                           title="schedule">schedule</a>
+                        
+                        <a class="tag" href="/blog/tags/#trigger"
+                           title="trigger">trigger</a>
+                        
+                        <a class="tag" href="/blog/tags/#job"
+                           title="job">job</a>
+                        
+                    </div>
+                </section>
+                
+
+                <!-- Friends Blog -->
+                
+            </div>
+        </div>
+
+    </div>
+</article>
+
+
+
+
+
+
+
+<!-- Footer -->
+<!-- Footer -->
+<footer>
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-8 col-lg-offset-2 col-md-10 col-md-offset-1 text-center">
+                <br>
+                <ul class="list-inline text-center">
+                
+                
+                    <li>
+                        <a target="_blank" href="https://twitter.com/ehazon">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x"></i>
+                                <i class="fa fa-twitter fa-stack-1x fa-inverse"></i>
+                            </span>
+                        </a>
+                    </li>
+                
+                
+                    <li>
+                        <a target="_blank" href="https://www.zhihu.com/people/megahertz">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x"></i>
+                                <i class="fa  fa-stack-1x fa-inverse">知</i>
+                            </span>
+                        </a>
+                    </li>
+                
+
+                
+                    <li>
+                        <a target="_blank" href="http://weibo.com/haojen">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x"></i>
+                                <i class="fa fa-weibo fa-stack-1x fa-inverse"></i>
+                            </span>
+                        </a>
+                    </li>
+                
+
+                
+
+                
+                    <li>
+                        <a target="_blank"  href="https://github.com/haojen">
+                            <span class="fa-stack fa-lg">
+                                <i class="fa fa-circle fa-stack-2x"></i>
+                                <i class="fa fa-github fa-stack-1x fa-inverse"></i>
+                            </span>
+                        </a>
+                    </li>
+                
+
+                
+
+                </ul>
+                <p class="copyright text-muted">
+                    Copyright &copy; luli 2019
+                    <br>
+                    <span id="busuanzi_container_site_pv" style="font-size: 12px;">PV: <span id="busuanzi_value_site_pv"></span> Times</span>
+                    <br>
+                    Theme by <a href="https://haojen.github.io/">Haojen Ma</a>
+                </p>
+
+            </div>
+        </div>
+    </div>
+</footer>
+
+<!-- jQuery -->
+<script src="/blog/js/jquery.min.js"></script>
+
+<!-- Bootstrap Core JavaScript -->
+<script src="/blog/js/bootstrap.min.js"></script>
+
+<!-- Custom Theme JavaScript -->
+<script src="/blog/js/blog.js"></script>
+
+<!-- async load function -->
+<script>
+    function async(u, c) {
+      var d = document, t = 'script',
+          o = d.createElement(t),
+          s = d.getElementsByTagName(t)[0];
+      o.src = u;
+      if (c) { o.addEventListener('load', function (e) { c(null, e); }, false); }
+      s.parentNode.insertBefore(o, s);
+    }
+</script>
+
+<!-- jquery.tagcloud.js -->
+<script>
+    // only load tagcloud.js in tag.html
+    if($('#tag_cloud').length !== 0){
+        async("http://tamlover.github.io/blog/js/jquery.tagcloud.js",function(){
+            $.fn.tagcloud.defaults = {
+                //size: {start: 1, end: 1, unit: 'em'},
+                color: {start: '#bbbbee', end: '#0085a1'},
+            };
+            $('#tag_cloud a').tagcloud();
+        })
+    }
+</script>
+
+<!--fastClick.js -->
+<script>
+    async("//cdn.bootcss.com/fastclick/1.0.6/fastclick.min.js", function(){
+        var $nav = document.querySelector("nav");
+        if($nav) FastClick.attach($nav);
+    })
+</script>
+
+
+
+<!-- Google Analytics -->
+
+
+
+<!-- Baidu Tongji -->
+
+
+<!-- swiftype -->
+<script type="text/javascript">
+  (function(w,d,t,u,n,s,e){w['SwiftypeObject']=n;w[n]=w[n]||function(){
+  (w[n].q=w[n].q||[]).push(arguments);};s=d.createElement(t);
+  e=d.getElementsByTagName(t)[0];s.async=1;s.src=u;e.parentNode.insertBefore(s,e);
+  })(window,document,'script','//s.swiftypecdn.com/install/v2/st.js','_st');
+
+  _st('install','','2.0.0');
+</script>
+
+<script async src="//busuanzi.ibruce.info/busuanzi/2.3/busuanzi.pure.mini.js"></script>
+
+<!--wechat title img-->
+<img class="wechat-title-img" src="">
+</body>
+
+</html>
